@@ -1,0 +1,56 @@
+# Stopped VM (runStrategy Halted). One referenced NAD has a CNI plugin list
+# entry without a "type"; another has no inline config at all.
+# Synthetic data: names, UIDs, MACs and addresses are illustrative only.
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: batch-04
+  namespace: demo
+  uid: 0d6d1f0e-0000-4000-8000-000000000001
+spec:
+  runStrategy: Halted
+  template:
+    spec:
+      domain:
+        devices:
+          interfaces:
+            - name: default
+              masquerade: {}
+            - name: backend
+              bridge: {}
+            - name: legacy
+              bridge: {}
+      networks:
+        - name: default
+          pod: {}
+        - name: backend
+          multus:
+            networkName: backend-net
+        - name: legacy
+          multus:
+            networkName: infra/legacy-net
+status:
+  printableStatus: Stopped
+---
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: backend-net
+  namespace: demo
+spec:
+  config: |-
+    {
+      "cniVersion": "0.3.1",
+      "name": "backend-net",
+      "plugins": [
+        {"bridge": "br-backend", "vlan": 300},
+        {"type": "tuning"}
+      ]
+    }
+---
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: legacy-net
+  namespace: infra
+spec: {}

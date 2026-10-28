@@ -1,0 +1,113 @@
+{
+  "schemaVersion": "netdoctor/v1alpha1",
+  "kind": "InspectionReport",
+  "toolVersion": "dev",
+  "topology": {
+    "target": {
+      "kind": "VirtualMachineInstance",
+      "namespace": "demo",
+      "name": "db-02"
+    },
+    "virtualMachineInstance": {
+      "name": "db-02",
+      "lookup": "Found",
+      "uid": "0b6d1f0e-0000-4000-8000-000000000002",
+      "phase": "Running",
+      "nodeName": "worker-2",
+      "guestAgent": "NotConnected",
+      "conditions": [
+        {
+          "type": "Ready",
+          "status": "True"
+        }
+      ],
+      "networkSpecSource": "VirtualMachineInstance"
+    },
+    "launcher": {
+      "lookup": "Found",
+      "selected": {
+        "name": "virt-launcher-db-02-9qzt4",
+        "uid": "0b6d1f0e-0000-4000-8000-000000000003",
+        "phase": "Running",
+        "nodeName": "worker-2"
+      },
+      "candidates": [
+        {
+          "name": "virt-launcher-db-02-9qzt4",
+          "uid": "0b6d1f0e-0000-4000-8000-000000000003",
+          "phase": "Running",
+          "nodeName": "worker-2"
+        }
+      ],
+      "selectionReason": "single active virt-launcher pod owned by the VMI",
+      "networkStatusPresent": true,
+      "multusDefaultNetwork": "demo/ovs-vlan200"
+    },
+    "nodeName": "worker-2",
+    "networks": [
+      {
+        "name": "data",
+        "source": "multus",
+        "multusDefault": true,
+        "interface": {
+          "binding": "bridge"
+        },
+        "guest": {
+          "name": "data",
+          "interfaceName": "eth0",
+          "mac": "02:00:00:00:c8:02",
+          "infoSource": "domain",
+          "podInterfaceName": "eth0"
+        },
+        "podAttachment": {
+          "networkName": "demo/ovs-vlan200",
+          "interface": "eth0",
+          "mac": "02:00:00:00:c8:02",
+          "default": true
+        },
+        "networkAttachmentDefinition": {
+          "ref": {
+            "namespace": "demo",
+            "name": "ovs-vlan200"
+          },
+          "lookup": "Found",
+          "config": {
+            "cniVersion": "0.4.0",
+            "name": "ovs-vlan200",
+            "isList": false,
+            "plugins": [
+              {
+                "type": "ovs",
+                "description": "Open vSwitch (OVS CNI)",
+                "role": "interface",
+                "bridge": "br-data",
+                "vlan": 200
+              }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  "findings": [
+    {
+      "id": "GUEST_IP_UNAVAILABLE",
+      "severity": "Info",
+      "category": "Unavailable",
+      "resource": "VirtualMachineInstance demo/db-02",
+      "summary": "Guest IP addresses are not reported; the guest agent is not connected",
+      "evidence": [
+        "interfaces without IPs: data",
+        "guest agent: NotConnected"
+      ],
+      "nextAction": "Install and start qemu-guest-agent in the guest to report in-guest addresses."
+    }
+  ],
+  "summary": {
+    "errors": 0,
+    "warnings": 0,
+    "info": 1,
+    "connectivity": "NotTested",
+    "scope": "Read-only Kubernetes API inspection. Guest, node, OVS/bridge, host NIC and switch state were not observed."
+  }
+}

@@ -1,0 +1,118 @@
+{
+  "schemaVersion": "netdoctor/v1alpha1",
+  "kind": "InspectionReport",
+  "toolVersion": "dev",
+  "topology": {
+    "target": {
+      "kind": "VirtualMachineInstance",
+      "namespace": "demo",
+      "name": "api-06"
+    },
+    "virtualMachineInstance": {
+      "name": "api-06",
+      "lookup": "Found",
+      "uid": "0f6d1f0e-0000-4000-8000-000000000002",
+      "phase": "Running",
+      "nodeName": "worker-1",
+      "guestAgent": "Connected",
+      "migrationInProgress": true,
+      "conditions": [
+        {
+          "type": "AgentConnected",
+          "status": "True"
+        }
+      ],
+      "networkSpecSource": "VirtualMachineInstance"
+    },
+    "launcher": {
+      "lookup": "Found",
+      "selected": {
+        "name": "virt-launcher-api-06-src11",
+        "uid": "0f6d1f0e-0000-4000-8000-000000000003",
+        "phase": "Running",
+        "nodeName": "worker-1",
+        "podIPs": [
+          "10.244.1.30"
+        ]
+      },
+      "candidates": [
+        {
+          "name": "virt-launcher-api-06-src11",
+          "uid": "0f6d1f0e-0000-4000-8000-000000000003",
+          "phase": "Running",
+          "nodeName": "worker-1",
+          "podIPs": [
+            "10.244.1.30"
+          ]
+        },
+        {
+          "name": "virt-launcher-api-06-tgt22",
+          "uid": "0f6d1f0e-0000-4000-8000-000000000004",
+          "phase": "Running",
+          "nodeName": "worker-2",
+          "podIPs": [
+            "10.244.3.31"
+          ]
+        }
+      ],
+      "terminated": [
+        {
+          "name": "virt-launcher-api-06-old11",
+          "uid": "0f6d1f0e-0000-4000-8000-000000000001",
+          "phase": "Succeeded",
+          "nodeName": "worker-3"
+        }
+      ],
+      "selectionReason": "2 active virt-launcher pods; selected the one on VMI node \"worker-1\"",
+      "networkStatusPresent": true
+    },
+    "nodeName": "worker-1",
+    "networks": [
+      {
+        "name": "default",
+        "source": "pod",
+        "interface": {
+          "binding": "masquerade"
+        },
+        "guest": {
+          "name": "default",
+          "interfaceName": "enp1s0",
+          "mac": "02:00:00:00:00:0c",
+          "ips": [
+            "10.244.1.30"
+          ],
+          "infoSource": "domain, guest-agent"
+        },
+        "podAttachment": {
+          "networkName": "k8s-pod-network",
+          "interface": "eth0",
+          "ips": [
+            "10.244.1.30"
+          ],
+          "default": true
+        }
+      }
+    ]
+  },
+  "findings": [
+    {
+      "id": "LAUNCHER_POD_MULTIPLE",
+      "severity": "Info",
+      "category": "Confirmed",
+      "resource": "VirtualMachineInstance demo/api-06",
+      "summary": "2 active virt-launcher pods exist; attachment checks used virt-launcher-api-06-src11",
+      "evidence": [
+        "2 active virt-launcher pods; selected the one on VMI node \"worker-1\"",
+        "a live migration is in progress"
+      ],
+      "nextAction": "Re-run after the migration completes to inspect the final placement."
+    }
+  ],
+  "summary": {
+    "errors": 0,
+    "warnings": 0,
+    "info": 1,
+    "connectivity": "NotTested",
+    "scope": "Read-only Kubernetes API inspection. Guest, node, OVS/bridge, host NIC and switch state were not observed."
+  }
+}

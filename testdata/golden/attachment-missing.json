@@ -1,0 +1,217 @@
+{
+  "schemaVersion": "netdoctor/v1alpha1",
+  "kind": "InspectionReport",
+  "toolVersion": "dev",
+  "topology": {
+    "target": {
+      "kind": "VirtualMachineInstance",
+      "namespace": "demo",
+      "name": "edge-05"
+    },
+    "virtualMachine": {
+      "name": "edge-05",
+      "lookup": "Found",
+      "runStrategy": "Always",
+      "printableStatus": "Running",
+      "ready": true
+    },
+    "virtualMachineInstance": {
+      "name": "edge-05",
+      "lookup": "Found",
+      "uid": "0e6d1f0e-0000-4000-8000-000000000002",
+      "phase": "Running",
+      "nodeName": "worker-1",
+      "guestAgent": "Connected",
+      "conditions": [
+        {
+          "type": "Ready",
+          "status": "True"
+        },
+        {
+          "type": "AgentConnected",
+          "status": "True"
+        }
+      ],
+      "networkSpecSource": "VirtualMachineInstance"
+    },
+    "launcher": {
+      "lookup": "Found",
+      "selected": {
+        "name": "virt-launcher-edge-05-l4m8d",
+        "uid": "0e6d1f0e-0000-4000-8000-000000000003",
+        "phase": "Running",
+        "nodeName": "worker-1",
+        "podIPs": [
+          "10.244.2.21"
+        ]
+      },
+      "candidates": [
+        {
+          "name": "virt-launcher-edge-05-l4m8d",
+          "uid": "0e6d1f0e-0000-4000-8000-000000000003",
+          "phase": "Running",
+          "nodeName": "worker-1",
+          "podIPs": [
+            "10.244.2.21"
+          ]
+        }
+      ],
+      "selectionReason": "single active virt-launcher pod owned by the VMI",
+      "networkStatusPresent": true
+    },
+    "nodeName": "worker-1",
+    "networks": [
+      {
+        "name": "default",
+        "source": "pod",
+        "interface": {
+          "binding": "masquerade"
+        },
+        "guest": {
+          "name": "default",
+          "interfaceName": "enp1s0",
+          "mac": "02:00:00:00:00:0b",
+          "ips": [
+            "10.244.2.21"
+          ],
+          "infoSource": "domain, guest-agent"
+        },
+        "podAttachment": {
+          "networkName": "k8s-pod-network",
+          "interface": "eth0",
+          "mac": "0a:58:0a:f4:02:15",
+          "ips": [
+            "10.244.2.21"
+          ],
+          "default": true
+        }
+      },
+      {
+        "name": "frontend",
+        "source": "multus",
+        "interface": {
+          "binding": "bridge",
+          "macAddress": "02:00:00:00:0f:01"
+        },
+        "guest": {
+          "name": "frontend",
+          "interfaceName": "enp2s0",
+          "mac": "02:00:00:00:0f:99",
+          "ips": [
+            "198.51.100.5"
+          ],
+          "infoSource": "domain, guest-agent, multus-status"
+        },
+        "podRequest": {
+          "interface": "pod1f6e3b8a2c4"
+        },
+        "podAttachment": {
+          "networkName": "demo/frontend-net",
+          "interface": "pod1f6e3b8a2c4",
+          "mac": "02:00:00:00:0f:01"
+        },
+        "networkAttachmentDefinition": {
+          "ref": {
+            "namespace": "demo",
+            "name": "frontend-net"
+          },
+          "lookup": "Found",
+          "config": {
+            "cniVersion": "0.3.1",
+            "name": "frontend-net",
+            "isList": false,
+            "plugins": [
+              {
+                "type": "cnv-bridge",
+                "description": "Linux bridge (cnv-bridge)",
+                "role": "interface",
+                "bridge": "br-front",
+                "ipam": "whereabouts"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "mgmt",
+        "source": "multus",
+        "interface": {
+          "binding": "bridge"
+        },
+        "guest": {
+          "name": "mgmt",
+          "interfaceName": "enp3s0",
+          "mac": "02:00:00:00:0e:01",
+          "infoSource": "domain, guest-agent"
+        },
+        "podRequest": {
+          "interface": "pod7d2a9c0e5b3"
+        },
+        "networkAttachmentDefinition": {
+          "ref": {
+            "namespace": "demo",
+            "name": "mgmt-net"
+          },
+          "lookup": "Found",
+          "config": {
+            "cniVersion": "0.3.1",
+            "name": "mgmt-net",
+            "isList": false,
+            "plugins": [
+              {
+                "type": "macvlan",
+                "description": "macvlan",
+                "role": "interface",
+                "master": "bond0.50",
+                "mode": "bridge"
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "guestOnlyInterfaces": [
+      {
+        "interfaceName": "docker0",
+        "mac": "02:42:00:00:00:01",
+        "ips": [
+          "172.17.0.1"
+        ],
+        "infoSource": "guest-agent"
+      }
+    ]
+  },
+  "findings": [
+    {
+      "id": "MULTUS_ATTACHMENT_MISSING",
+      "severity": "Error",
+      "category": "Confirmed",
+      "resource": "Pod demo/virt-launcher-edge-05-l4m8d",
+      "summary": "Attachment to demo/mgmt-net (network \"mgmt\") is not listed in the launcher pod's Multus network-status",
+      "evidence": [
+        "k8s.v1.cni.cncf.io/network-status annotation present on pod virt-launcher-edge-05-l4m8d",
+        "requested pod interface: pod7d2a9c0e5b3"
+      ],
+      "nextAction": "Check Multus and the delegate CNI plugin logs on node worker-1 and the pod events for CNI ADD errors."
+    },
+    {
+      "id": "INTERFACE_STATUS_MISMATCH",
+      "severity": "Warning",
+      "category": "Confirmed",
+      "resource": "VirtualMachineInstance demo/edge-05",
+      "summary": "Interface \"frontend\" reports MAC 02:00:00:00:0f:99 but the spec requests 02:00:00:00:0f:01",
+      "evidence": [
+        "spec macAddress: 02:00:00:00:0f:01",
+        "status mac: 02:00:00:00:0f:99 (source: domain, guest-agent, multus-status)"
+      ],
+      "nextAction": "Check whether the guest OS overrides the MAC address, or whether the spec changed without a restart."
+    }
+  ],
+  "summary": {
+    "errors": 1,
+    "warnings": 1,
+    "info": 0,
+    "connectivity": "NotTested",
+    "scope": "Read-only Kubernetes API inspection. Guest, node, OVS/bridge, host NIC and switch state were not observed."
+  }
+}

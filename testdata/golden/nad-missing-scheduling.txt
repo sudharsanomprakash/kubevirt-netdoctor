@@ -1,0 +1,33 @@
+Target:    VirtualMachine demo/app-03
+VM:        app-03  runStrategy=Always  status=Starting
+VMI:       app-03  phase=Scheduling  node=-  guestAgent=Unknown
+Launcher:  none selected (no non-terminated virt-launcher pod owned by the VMI was found)
+
+NETWORKS (2)
+  default  [pod network, binding: masquerade]
+    guest:  not reported
+    pod:    no launcher pod selected
+  storage  [multus demo/storage-net, binding: bridge]
+    guest:  not reported
+    pod:    no launcher pod selected
+    nad:    NotFound
+
+FINDINGS (3): 1 error(s), 1 warning(s), 1 info
+  ERROR   NAD_NOT_FOUND [Confirmed] NetworkAttachmentDefinition demo/storage-net
+          Referenced NetworkAttachmentDefinition demo/storage-net does not exist
+          - referenced by network(s): storage
+          - GET network-attachment-definitions.k8s.cni.cncf.io demo/storage-net returned NotFound
+          next: Create NetworkAttachmentDefinition demo/storage-net, or correct spec.networks[].multus.networkName. Names without a namespace resolve to the VM's namespace (demo).
+  WARNING VMI_NOT_RUNNING [Suspected] VirtualMachineInstance demo/app-03
+          VMI is Scheduling; network attachments may not be set up yet
+          - status.phase: Scheduling
+          - condition Ready=False reason=GuestNotRunning
+          - condition Synchronized=False reason=FailedCreate: failed to render launch manifest: failed to locate network attachment definition demo/storage-net
+          next: If the phase does not progress, check the VMI conditions and virt-launcher pod events; missing NetworkAttachmentDefinitions and unschedulable network resources commonly block startup.
+  INFO    LAUNCHER_POD_MISSING [Suspected] VirtualMachineInstance demo/app-03
+          No virt-launcher pod exists yet for the VMI
+          - selector kubevirt.io/created-by=0c6d1f0e-0000-4000-8000-000000000002, owner VirtualMachineInstance app-03
+          - VMI phase: Scheduling
+          next: Wait for scheduling; if it persists, check virt-controller events for pod creation failures.
+
+Connectivity: NOT TESTED. Read-only Kubernetes API inspection. Guest, node, OVS/bridge, host NIC and switch state were not observed.

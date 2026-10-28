@@ -1,0 +1,122 @@
+# Running VMI with two secondary networks. Multus network-status lists the
+# cluster network and only one of the two secondary attachments. The guest
+# also reports a MAC on one interface that differs from the spec.
+# Synthetic data: names, UIDs, MACs and addresses are illustrative only.
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: edge-05
+  namespace: demo
+  uid: 0e6d1f0e-0000-4000-8000-000000000001
+spec:
+  runStrategy: Always
+status:
+  printableStatus: Running
+  ready: true
+---
+apiVersion: kubevirt.io/v1
+kind: VirtualMachineInstance
+metadata:
+  name: edge-05
+  namespace: demo
+  uid: 0e6d1f0e-0000-4000-8000-000000000002
+  ownerReferences:
+    - apiVersion: kubevirt.io/v1
+      kind: VirtualMachine
+      name: edge-05
+      uid: 0e6d1f0e-0000-4000-8000-000000000001
+      controller: true
+spec:
+  domain:
+    devices:
+      interfaces:
+        - name: default
+          masquerade: {}
+        - name: frontend
+          bridge: {}
+          macAddress: "02:00:00:00:0f:01"
+        - name: mgmt
+          bridge: {}
+  networks:
+    - name: default
+      pod: {}
+    - name: frontend
+      multus:
+        networkName: frontend-net
+    - name: mgmt
+      multus:
+        networkName: mgmt-net
+status:
+  phase: Running
+  nodeName: worker-1
+  conditions:
+    - type: Ready
+      status: "True"
+    - type: AgentConnected
+      status: "True"
+  interfaces:
+    - name: default
+      interfaceName: enp1s0
+      ipAddress: 10.244.2.21
+      mac: "02:00:00:00:00:0b"
+      infoSource: domain, guest-agent
+    - name: frontend
+      interfaceName: enp2s0
+      ipAddress: 198.51.100.5
+      mac: "02:00:00:00:0f:99"
+      infoSource: domain, guest-agent, multus-status
+    - name: mgmt
+      interfaceName: enp3s0
+      mac: "02:00:00:00:0e:01"
+      infoSource: domain, guest-agent
+    - interfaceName: docker0
+      ipAddress: 172.17.0.1
+      mac: "02:42:00:00:00:01"
+      infoSource: guest-agent
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: virt-launcher-edge-05-l4m8d
+  namespace: demo
+  uid: 0e6d1f0e-0000-4000-8000-000000000003
+  creationTimestamp: "2026-01-01T00:00:00Z"
+  labels:
+    kubevirt.io: virt-launcher
+    kubevirt.io/created-by: 0e6d1f0e-0000-4000-8000-000000000002
+  annotations:
+    k8s.v1.cni.cncf.io/networks: '[{"name":"frontend-net","namespace":"demo","interface":"pod1f6e3b8a2c4"},{"name":"mgmt-net","namespace":"demo","interface":"pod7d2a9c0e5b3"}]'
+    k8s.v1.cni.cncf.io/network-status: |-
+      [{"name":"k8s-pod-network","interface":"eth0","ips":["10.244.2.21"],"mac":"0a:58:0a:f4:02:15","default":true,"dns":{}},
+       {"name":"demo/frontend-net","interface":"pod1f6e3b8a2c4","mac":"02:00:00:00:0f:01","dns":{}}]
+  ownerReferences:
+    - apiVersion: kubevirt.io/v1
+      kind: VirtualMachineInstance
+      name: edge-05
+      uid: 0e6d1f0e-0000-4000-8000-000000000002
+      controller: true
+spec:
+  nodeName: worker-1
+  containers:
+    - name: compute
+      image: example.invalid/virt-launcher:v1
+status:
+  phase: Running
+  podIPs:
+    - ip: 10.244.2.21
+---
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: frontend-net
+  namespace: demo
+spec:
+  config: '{"cniVersion":"0.3.1","name":"frontend-net","type":"cnv-bridge","bridge":"br-front","ipam":{"type":"whereabouts","range":"198.51.100.0/24"}}'
+---
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: mgmt-net
+  namespace: demo
+spec:
+  config: '{"cniVersion":"0.3.1","name":"mgmt-net","type":"macvlan","master":"bond0.50","mode":"bridge"}'

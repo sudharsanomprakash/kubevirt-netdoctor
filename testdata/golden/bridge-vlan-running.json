@@ -1,0 +1,153 @@
+{
+  "schemaVersion": "netdoctor/v1alpha1",
+  "kind": "InspectionReport",
+  "toolVersion": "dev",
+  "topology": {
+    "target": {
+      "kind": "VirtualMachine",
+      "namespace": "demo",
+      "name": "web-01"
+    },
+    "virtualMachine": {
+      "name": "web-01",
+      "lookup": "Found",
+      "runStrategy": "Always",
+      "printableStatus": "Running",
+      "ready": true
+    },
+    "virtualMachineInstance": {
+      "name": "web-01",
+      "lookup": "Found",
+      "uid": "0a6d1f0e-0000-4000-8000-000000000002",
+      "phase": "Running",
+      "nodeName": "worker-1",
+      "guestAgent": "Connected",
+      "conditions": [
+        {
+          "type": "Ready",
+          "status": "True"
+        },
+        {
+          "type": "AgentConnected",
+          "status": "True"
+        }
+      ],
+      "networkSpecSource": "VirtualMachineInstance"
+    },
+    "launcher": {
+      "lookup": "Found",
+      "selected": {
+        "name": "virt-launcher-web-01-x7k2p",
+        "uid": "0a6d1f0e-0000-4000-8000-000000000003",
+        "phase": "Running",
+        "nodeName": "worker-1",
+        "podIPs": [
+          "10.244.1.15"
+        ]
+      },
+      "candidates": [
+        {
+          "name": "virt-launcher-web-01-x7k2p",
+          "uid": "0a6d1f0e-0000-4000-8000-000000000003",
+          "phase": "Running",
+          "nodeName": "worker-1",
+          "podIPs": [
+            "10.244.1.15"
+          ]
+        }
+      ],
+      "selectionReason": "single active virt-launcher pod owned by the VMI",
+      "networkStatusPresent": true
+    },
+    "nodeName": "worker-1",
+    "networks": [
+      {
+        "name": "default",
+        "source": "pod",
+        "interface": {
+          "binding": "masquerade"
+        },
+        "guest": {
+          "name": "default",
+          "interfaceName": "enp1s0",
+          "mac": "02:00:00:00:00:0a",
+          "ips": [
+            "10.244.1.15"
+          ],
+          "infoSource": "domain, guest-agent",
+          "podInterfaceName": "eth0"
+        },
+        "podAttachment": {
+          "networkName": "k8s-pod-network",
+          "interface": "eth0",
+          "mac": "0a:58:0a:f4:01:0f",
+          "ips": [
+            "10.244.1.15"
+          ],
+          "default": true
+        }
+      },
+      {
+        "name": "vlan100",
+        "source": "multus",
+        "interface": {
+          "binding": "bridge",
+          "macAddress": "02:00:00:00:64:01"
+        },
+        "guest": {
+          "name": "vlan100",
+          "interfaceName": "enp2s0",
+          "mac": "02:00:00:00:64:01",
+          "ips": [
+            "192.0.2.10"
+          ],
+          "infoSource": "domain, guest-agent, multus-status",
+          "podInterfaceName": "pod5c6f2b9e0d1"
+        },
+        "podRequest": {
+          "interface": "pod5c6f2b9e0d1",
+          "mac": "02:00:00:00:64:01"
+        },
+        "podAttachment": {
+          "networkName": "demo/br-vlan100",
+          "interface": "pod5c6f2b9e0d1",
+          "mac": "02:00:00:00:64:01"
+        },
+        "networkAttachmentDefinition": {
+          "ref": {
+            "namespace": "demo",
+            "name": "br-vlan100"
+          },
+          "lookup": "Found",
+          "config": {
+            "cniVersion": "0.3.1",
+            "name": "br-vlan100",
+            "isList": true,
+            "plugins": [
+              {
+                "type": "bridge",
+                "description": "Linux bridge",
+                "role": "interface",
+                "bridge": "br1",
+                "vlan": 100
+              },
+              {
+                "type": "tuning",
+                "description": "tuning (sysctl/MAC/MTU)",
+                "role": "meta"
+              }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  "findings": [],
+  "summary": {
+    "errors": 0,
+    "warnings": 0,
+    "info": 0,
+    "connectivity": "NotTested",
+    "scope": "Read-only Kubernetes API inspection. Guest, node, OVS/bridge, host NIC and switch state were not observed."
+  }
+}

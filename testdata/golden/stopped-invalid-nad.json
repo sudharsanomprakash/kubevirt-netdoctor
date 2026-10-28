@@ -1,0 +1,113 @@
+{
+  "schemaVersion": "netdoctor/v1alpha1",
+  "kind": "InspectionReport",
+  "toolVersion": "dev",
+  "topology": {
+    "target": {
+      "kind": "VirtualMachine",
+      "namespace": "demo",
+      "name": "batch-04"
+    },
+    "virtualMachine": {
+      "name": "batch-04",
+      "lookup": "Found",
+      "runStrategy": "Halted",
+      "printableStatus": "Stopped",
+      "ready": false
+    },
+    "virtualMachineInstance": {
+      "name": "batch-04",
+      "lookup": "NotFound",
+      "networkSpecSource": "VirtualMachineTemplate"
+    },
+    "launcher": {
+      "lookup": "NotChecked",
+      "selectionReason": "no VirtualMachineInstance exists",
+      "networkStatusPresent": false
+    },
+    "networks": [
+      {
+        "name": "default",
+        "source": "pod",
+        "interface": {
+          "binding": "masquerade"
+        }
+      },
+      {
+        "name": "backend",
+        "source": "multus",
+        "interface": {
+          "binding": "bridge"
+        },
+        "networkAttachmentDefinition": {
+          "ref": {
+            "namespace": "demo",
+            "name": "backend-net"
+          },
+          "lookup": "Found",
+          "configError": "plugins[0]: plugin has no \"type\""
+        }
+      },
+      {
+        "name": "legacy",
+        "source": "multus",
+        "interface": {
+          "binding": "bridge"
+        },
+        "networkAttachmentDefinition": {
+          "ref": {
+            "namespace": "infra",
+            "name": "legacy-net"
+          },
+          "lookup": "Found",
+          "configNotInline": true
+        }
+      }
+    ]
+  },
+  "findings": [
+    {
+      "id": "NAD_CONFIG_INVALID",
+      "severity": "Error",
+      "category": "Confirmed",
+      "resource": "NetworkAttachmentDefinition demo/backend-net",
+      "summary": "NetworkAttachmentDefinition spec.config is not a valid CNI configuration",
+      "evidence": [
+        "plugins[0]: plugin has no \"type\""
+      ],
+      "nextAction": "Fix spec.config; inspect it with: kubectl get network-attachment-definitions -n demo backend-net -o jsonpath='{.spec.config}'"
+    },
+    {
+      "id": "NAD_CONFIG_NOT_INLINE",
+      "severity": "Info",
+      "category": "Unavailable",
+      "resource": "NetworkAttachmentDefinition infra/legacy-net",
+      "summary": "CNI configuration is not inline; Multus reads it from a node-local file that netdoctor cannot observe",
+      "evidence": [
+        "spec.config is empty"
+      ],
+      "nextAction": "Verify the CNI configuration file for this network exists on the node hosting the VM."
+    },
+    {
+      "id": "VMI_NOT_RUNNING",
+      "severity": "Info",
+      "category": "Confirmed",
+      "resource": "VirtualMachine demo/batch-04",
+      "summary": "VM is stopped; only its configured networks can be checked",
+      "evidence": [
+        "VirtualMachineInstance demo/batch-04 does not exist",
+        "runStrategy: Halted",
+        "printableStatus: Stopped",
+        "network configuration was evaluated from the VM template only"
+      ],
+      "nextAction": "Start the VM (virtctl start) to inspect runtime network attachments."
+    }
+  ],
+  "summary": {
+    "errors": 1,
+    "warnings": 0,
+    "info": 2,
+    "connectivity": "NotTested",
+    "scope": "Read-only Kubernetes API inspection. Guest, node, OVS/bridge, host NIC and switch state were not observed."
+  }
+}

@@ -1,0 +1,46 @@
+name: Bug report
+description: Report incorrect diagnostics, crashes or other defects
+labels: ["kind/bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a problem. **Do not include secrets, real hostnames, public IP
+        addresses or other sensitive data.** Redact or replace them with synthetic values.
+        Security vulnerabilities must be reported privately; see SECURITY.md.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Include the command you ran and the relevant output.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How can we reproduce it?
+      description: Redacted VM/VMI, launcher pod annotations and NetworkAttachmentDefinition manifests help most.
+      render: yaml
+  - type: input
+    id: netdoctor-version
+    attributes:
+      label: netdoctor version
+      description: Output of `kubectl netdoctor version`
+    validations:
+      required: true
+  - type: input
+    id: kubevirt-version
+    attributes:
+      label: KubeVirt and Kubernetes versions
+      placeholder: "KubeVirt v1.x, Kubernetes v1.x"
+  - type: input
+    id: cni
+    attributes:
+      label: CNI plugins in use
+      placeholder: "Multus, Calico, OVS CNI, Linux bridge, ..."

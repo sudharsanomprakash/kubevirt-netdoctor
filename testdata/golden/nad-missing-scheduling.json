@@ -1,0 +1,115 @@
+{
+  "schemaVersion": "netdoctor/v1alpha1",
+  "kind": "InspectionReport",
+  "toolVersion": "dev",
+  "topology": {
+    "target": {
+      "kind": "VirtualMachine",
+      "namespace": "demo",
+      "name": "app-03"
+    },
+    "virtualMachine": {
+      "name": "app-03",
+      "lookup": "Found",
+      "runStrategy": "Always",
+      "printableStatus": "Starting",
+      "ready": false
+    },
+    "virtualMachineInstance": {
+      "name": "app-03",
+      "lookup": "Found",
+      "uid": "0c6d1f0e-0000-4000-8000-000000000002",
+      "phase": "Scheduling",
+      "guestAgent": "Unknown",
+      "conditions": [
+        {
+          "type": "Ready",
+          "status": "False",
+          "reason": "GuestNotRunning"
+        },
+        {
+          "type": "Synchronized",
+          "status": "False",
+          "reason": "FailedCreate",
+          "message": "failed to render launch manifest: failed to locate network attachment definition demo/storage-net"
+        }
+      ],
+      "networkSpecSource": "VirtualMachineInstance"
+    },
+    "launcher": {
+      "lookup": "NotFound",
+      "selectionReason": "no non-terminated virt-launcher pod owned by the VMI was found",
+      "networkStatusPresent": false
+    },
+    "networks": [
+      {
+        "name": "default",
+        "source": "pod",
+        "interface": {
+          "binding": "masquerade"
+        }
+      },
+      {
+        "name": "storage",
+        "source": "multus",
+        "interface": {
+          "binding": "bridge"
+        },
+        "networkAttachmentDefinition": {
+          "ref": {
+            "namespace": "demo",
+            "name": "storage-net"
+          },
+          "lookup": "NotFound",
+          "message": "network-attachment-definitions.k8s.cni.cncf.io \"storage-net\" not found"
+        }
+      }
+    ]
+  },
+  "findings": [
+    {
+      "id": "NAD_NOT_FOUND",
+      "severity": "Error",
+      "category": "Confirmed",
+      "resource": "NetworkAttachmentDefinition demo/storage-net",
+      "summary": "Referenced NetworkAttachmentDefinition demo/storage-net does not exist",
+      "evidence": [
+        "referenced by network(s): storage",
+        "GET network-attachment-definitions.k8s.cni.cncf.io demo/storage-net returned NotFound"
+      ],
+      "nextAction": "Create NetworkAttachmentDefinition demo/storage-net, or correct spec.networks[].multus.networkName. Names without a namespace resolve to the VM's namespace (demo)."
+    },
+    {
+      "id": "VMI_NOT_RUNNING",
+      "severity": "Warning",
+      "category": "Suspected",
+      "resource": "VirtualMachineInstance demo/app-03",
+      "summary": "VMI is Scheduling; network attachments may not be set up yet",
+      "evidence": [
+        "status.phase: Scheduling",
+        "condition Ready=False reason=GuestNotRunning",
+        "condition Synchronized=False reason=FailedCreate: failed to render launch manifest: failed to locate network attachment definition demo/storage-net"
+      ],
+      "nextAction": "If the phase does not progress, check the VMI conditions and virt-launcher pod events; missing NetworkAttachmentDefinitions and unschedulable network resources commonly block startup."
+    },
+    {
+      "id": "LAUNCHER_POD_MISSING",
+      "severity": "Info",
+      "category": "Suspected",
+      "resource": "VirtualMachineInstance demo/app-03",
+      "summary": "No virt-launcher pod exists yet for the VMI",
+      "evidence": [
+        "selector kubevirt.io/created-by=0c6d1f0e-0000-4000-8000-000000000002, owner VirtualMachineInstance app-03",
+        "VMI phase: Scheduling"
+      ],
+      "nextAction": "Wait for scheduling; if it persists, check virt-controller events for pod creation failures."
+    }
+  ],
+  "summary": {
+    "errors": 1,
+    "warnings": 1,
+    "info": 1,
+    "connectivity": "NotTested",
+    "scope": "Read-only Kubernetes API inspection. Guest, node, OVS/bridge, host NIC and switch state were not observed."
+  }
+}

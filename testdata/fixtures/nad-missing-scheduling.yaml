@@ -1,0 +1,67 @@
+# VM whose secondary network references a NetworkAttachmentDefinition that
+# does not exist. virt-controller cannot render the launcher pod, so the VMI
+# stays in Scheduling and no virt-launcher pod exists.
+# Synthetic data: names, UIDs, MACs and addresses are illustrative only.
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: app-03
+  namespace: demo
+  uid: 0c6d1f0e-0000-4000-8000-000000000001
+spec:
+  runStrategy: Always
+  template:
+    spec:
+      domain:
+        devices:
+          interfaces:
+            - name: default
+              masquerade: {}
+            - name: storage
+              bridge: {}
+      networks:
+        - name: default
+          pod: {}
+        - name: storage
+          multus:
+            networkName: storage-net
+status:
+  printableStatus: Starting
+  ready: false
+---
+apiVersion: kubevirt.io/v1
+kind: VirtualMachineInstance
+metadata:
+  name: app-03
+  namespace: demo
+  uid: 0c6d1f0e-0000-4000-8000-000000000002
+  ownerReferences:
+    - apiVersion: kubevirt.io/v1
+      kind: VirtualMachine
+      name: app-03
+      uid: 0c6d1f0e-0000-4000-8000-000000000001
+      controller: true
+spec:
+  domain:
+    devices:
+      interfaces:
+        - name: default
+          masquerade: {}
+        - name: storage
+          bridge: {}
+  networks:
+    - name: default
+      pod: {}
+    - name: storage
+      multus:
+        networkName: storage-net
+status:
+  phase: Scheduling
+  conditions:
+    - type: Ready
+      status: "False"
+      reason: GuestNotRunning
+    - type: Synchronized
+      status: "False"
+      reason: FailedCreate
+      message: 'failed to render launch manifest: failed to locate network attachment definition demo/storage-net'

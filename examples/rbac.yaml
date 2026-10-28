@@ -1,0 +1,35 @@
+# Minimal read-only permissions for kubectl netdoctor.
+#
+# Bind the ClusterRole with a RoleBinding in each namespace you want to inspect,
+# and in any namespace holding NetworkAttachmentDefinitions referenced as
+# <namespace>/<name>. API discovery (used to detect whether KubeVirt and Multus
+# are installed) is granted to authenticated users by the default
+# system:discovery role.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: netdoctor-reader
+rules:
+  - apiGroups: ["kubevirt.io"]
+    resources: ["virtualmachines", "virtualmachineinstances"]
+    verbs: ["get"]
+  - apiGroups: ["k8s.cni.cncf.io"]
+    resources: ["network-attachment-definitions"]
+    verbs: ["get"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: netdoctor-reader
+  namespace: demo
+subjects:
+  - kind: Group
+    name: vm-network-operators # replace with your user or group
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: netdoctor-reader
+  apiGroup: rbac.authorization.k8s.io

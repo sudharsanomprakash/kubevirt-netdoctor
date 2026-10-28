@@ -1,0 +1,31 @@
+Target:    VirtualMachineInstance demo/edge-05
+VM:        edge-05  runStrategy=Always  status=Running
+VMI:       edge-05  phase=Running  node=worker-1  guestAgent=Connected
+Launcher:  virt-launcher-edge-05-l4m8d  phase=Running  node=worker-1
+
+NETWORKS (3)
+  default  [pod network, binding: masquerade]
+    guest:  iface enp1s0  mac 02:00:00:00:00:0b  ips 10.244.2.21  source domain, guest-agent
+    pod:    iface eth0  network k8s-pod-network  mac 0a:58:0a:f4:02:15  ips 10.244.2.21 (Multus network-status)
+  frontend  [multus demo/frontend-net, binding: bridge]
+    guest:  iface enp2s0  mac 02:00:00:00:0f:99  ips 198.51.100.5  source domain, guest-agent, multus-status
+    pod:    iface pod1f6e3b8a2c4  network demo/frontend-net  mac 02:00:00:00:0f:01 (Multus network-status)
+    nad:    found; cni cnv-bridge(br=br-front); ipam whereabouts
+  mgmt  [multus demo/mgmt-net, binding: bridge]
+    guest:  iface enp3s0  mac 02:00:00:00:0e:01  ips none reported  source domain, guest-agent
+    pod:    requested iface pod7d2a9c0e5b3; not in Multus network-status
+    nad:    found; cni macvlan(master=bond0.50)
+
+FINDINGS (2): 1 error(s), 1 warning(s), 0 info
+  ERROR   MULTUS_ATTACHMENT_MISSING [Confirmed] Pod demo/virt-launcher-edge-05-l4m8d
+          Attachment to demo/mgmt-net (network "mgmt") is not listed in the launcher pod's Multus network-status
+          - k8s.v1.cni.cncf.io/network-status annotation present on pod virt-launcher-edge-05-l4m8d
+          - requested pod interface: pod7d2a9c0e5b3
+          next: Check Multus and the delegate CNI plugin logs on node worker-1 and the pod events for CNI ADD errors.
+  WARNING INTERFACE_STATUS_MISMATCH [Confirmed] VirtualMachineInstance demo/edge-05
+          Interface "frontend" reports MAC 02:00:00:00:0f:99 but the spec requests 02:00:00:00:0f:01
+          - spec macAddress: 02:00:00:00:0f:01
+          - status mac: 02:00:00:00:0f:99 (source: domain, guest-agent, multus-status)
+          next: Check whether the guest OS overrides the MAC address, or whether the spec changed without a restart.
+
+Connectivity: NOT TESTED. Read-only Kubernetes API inspection. Guest, node, OVS/bridge, host NIC and switch state were not observed.
