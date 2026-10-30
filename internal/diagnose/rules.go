@@ -32,16 +32,26 @@ const (
 	IDGuestIPUnavailable      = "GUEST_IP_UNAVAILABLE"
 )
 
-// DefaultRules returns the rules evaluated by "inspect".
+// AllRules returns every rule, as run by "diagnose"; rules whose inputs are absent stay
+// silent, so this is safe without a host snapshot or destination.
+func AllRules() []Rule {
+	rules := DefaultRules()
+	rules = append(rules, HostRules()...)
+	rules = append(rules, RouteRules()...)
+	return append(rules, TopologyRules()...)
+}
+
+// DefaultRules returns the Kubernetes API rules evaluated by "inspect".
 func DefaultRules() []Rule {
 	return []Rule{
-		{ID: "access", Description: "API requests that were denied or could not be answered", Check: checkAccess},
-		{ID: "vmi-running", Description: "VMI existence and phase", Check: checkVMIRunning},
-		{ID: "nad-exists", Description: "Referenced NetworkAttachmentDefinitions exist", Check: checkNADExists},
-		{ID: "nad-config", Description: "NetworkAttachmentDefinition CNI configuration is valid", Check: checkNADConfig},
-		{ID: "launcher-pod", Description: "A single virt-launcher pod hosts the VMI", Check: checkLauncherPod},
-		{ID: "multus-attachments", Description: "Requested Multus attachments are reported in network-status", Check: checkMultusAttachments},
-		{ID: "interface-status", Description: "VMI interface spec and status agree", Check: checkInterfaceStatus},
+		{ID: "access", Description: "API requests that were denied or could not be answered", Check: onTopology(checkAccess)},
+		{ID: "vmi-running", Description: "VMI existence and phase", Check: onTopology(checkVMIRunning)},
+		{ID: "nad-exists", Description: "Referenced NetworkAttachmentDefinitions exist", Check: onTopology(checkNADExists)},
+		{ID: "nad-config", Description: "NetworkAttachmentDefinition CNI configuration is valid", Check: onTopology(checkNADConfig)},
+		{ID: "launcher-pod", Description: "A single virt-launcher pod hosts the VMI", Check: onTopology(checkLauncherPod)},
+		{ID: "multus-attachments", Description: "Requested Multus attachments are reported in network-status", Check: onTopology(checkMultusAttachments)},
+		{ID: "interface-status", Description: "VMI interface spec and status agree", Check: onTopology(checkInterfaceStatus)},
+		{ID: "multus-mac", Description: "Multus applied the MAC address KubeVirt requested", Check: onTopology(checkAttachmentMAC)},
 	}
 }
 

@@ -242,3 +242,42 @@ func TestCorrelateNADConfigStates(t *testing.T) {
 		t.Errorf("file: %+v", f.NAD)
 	}
 }
+
+func TestCorrelateRecordsMatchMethod(t *testing.T) {
+	in := CorrelationInput{
+		Namespace: "demo",
+		Spec: spec(
+			[]kubevirt.Interface{{Name: "default", Masquerade: &marker}, bridgeIface("hinted", ""), bridgeIface("requested", ""), bridgeIface("ordered", "")},
+			kubevirt.Network{Name: "default", Pod: &kubevirt.PodNetwork{}},
+			multusNet("hinted", "a"), multusNet("requested", "b"), multusNet("ordered", "c"),
+		),
+		Status: &kubevirt.VMIStatus{Interfaces: []kubevirt.InterfaceStatus{{Name: "hinted", PodInterfaceName: "podA"}}},
+		Pod: multus.PodNetworking{
+			Selections: []multus.NetworkSelection{
+				{Name: "a", Interface: "podA"}, {Name: "b", Interface: "podB"}, {Name: "c"},
+			},
+			StatusPresent: true,
+			Statuses: []multus.NetworkStatus{
+				{Name: "k8s-pod-network", Interface: "eth0", Default: true},
+				{Name: "demo/a", Interface: "podA"},
+				{Name: "demo/b", Interface: "podB"},
+				{Name: "demo/c", Interface: "net3"},
+				{Name: "demo/stray", Interface: "net9"},
+			},
+		},
+	}
+	res := Correlate(in)
+	for name, want := range map[string]string{
+		"default":   MatchDefaultFlag,
+		"hinted":    MatchPodInterfaceName,
+		"requested": MatchRequestInterface,
+		"ordered":   MatchReferenceOrder,
+	} {
+		if got := byName(t, res.Networks, name).PodAttachment; got == nil || got.MatchedBy != want {
+			t.Errorf("%s: attachment %+v, want matchedBy %s", name, got, want)
+		}
+	}
+	if len(res.UnmatchedPodAttachments) != 1 || res.UnmatchedPodAttachments[0].NetworkName != "demo/stray" {
+		t.Errorf("unmatched pod attachments: %+v", res.UnmatchedPodAttachments)
+	}
+}

@@ -1,0 +1,315 @@
+{
+  "schemaVersion": "netdoctor/v1alpha1",
+  "kind": "DiagnosisReport",
+  "toolVersion": "dev",
+  "topology": {
+    "target": {
+      "kind": "VirtualMachine",
+      "namespace": "demo",
+      "name": "db-03"
+    },
+    "virtualMachine": {
+      "name": "db-03",
+      "lookup": "Found",
+      "runStrategy": "Always",
+      "printableStatus": "Running",
+      "ready": true
+    },
+    "virtualMachineInstance": {
+      "name": "db-03",
+      "lookup": "Found",
+      "uid": "1b6d1f0e-0000-4000-8000-000000000002",
+      "phase": "Running",
+      "nodeName": "worker-2",
+      "guestAgent": "Connected",
+      "conditions": [
+        {
+          "type": "AgentConnected",
+          "status": "True"
+        }
+      ],
+      "networkSpecSource": "VirtualMachineInstance"
+    },
+    "launcher": {
+      "lookup": "Found",
+      "selected": {
+        "name": "virt-launcher-db-03-p8w4k",
+        "uid": "1b6d1f0e-0000-4000-8000-000000000003",
+        "phase": "Running",
+        "nodeName": "worker-2",
+        "podIPs": [
+          "10.244.2.33"
+        ]
+      },
+      "candidates": [
+        {
+          "name": "virt-launcher-db-03-p8w4k",
+          "uid": "1b6d1f0e-0000-4000-8000-000000000003",
+          "phase": "Running",
+          "nodeName": "worker-2",
+          "podIPs": [
+            "10.244.2.33"
+          ]
+        }
+      ],
+      "selectionReason": "single active virt-launcher pod owned by the VMI",
+      "networkStatusPresent": true
+    },
+    "nodeName": "worker-2",
+    "networks": [
+      {
+        "name": "default",
+        "source": "pod",
+        "interface": {
+          "binding": "masquerade"
+        },
+        "guest": {
+          "name": "default",
+          "interfaceName": "enp1s0",
+          "mac": "02:00:00:00:00:0e",
+          "ips": [
+            "10.244.2.33"
+          ],
+          "infoSource": "domain, guest-agent",
+          "podInterfaceName": "eth0"
+        },
+        "podAttachment": {
+          "networkName": "k8s-pod-network",
+          "interface": "eth0",
+          "mac": "0a:58:0a:f4:02:21",
+          "ips": [
+            "10.244.2.33"
+          ],
+          "default": true,
+          "matchedBy": "defaultFlag"
+        }
+      },
+      {
+        "name": "data",
+        "source": "multus",
+        "interface": {
+          "binding": "bridge",
+          "macAddress": "02:00:00:00:c8:03"
+        },
+        "guest": {
+          "name": "data",
+          "interfaceName": "enp2s0",
+          "mac": "02:00:00:00:c8:03",
+          "ips": [
+            "198.51.100.33"
+          ],
+          "infoSource": "domain, guest-agent, multus-status",
+          "podInterfaceName": "pod3e9a1c7b2d0"
+        },
+        "podRequest": {
+          "interface": "pod3e9a1c7b2d0",
+          "mac": "02:00:00:00:c8:03"
+        },
+        "podAttachment": {
+          "networkName": "demo/ovs-vlan200",
+          "interface": "pod3e9a1c7b2d0",
+          "mac": "02:00:00:00:c8:03",
+          "matchedBy": "podInterfaceName"
+        },
+        "networkAttachmentDefinition": {
+          "ref": {
+            "namespace": "demo",
+            "name": "ovs-vlan200"
+          },
+          "lookup": "Found",
+          "config": {
+            "cniVersion": "0.4.0",
+            "name": "ovs-vlan200",
+            "isList": false,
+            "plugins": [
+              {
+                "type": "ovs",
+                "description": "Open vSwitch (OVS CNI)",
+                "role": "interface",
+                "bridge": "br-data",
+                "vlan": 200,
+                "mtu": 9000,
+                "ipam": "whereabouts",
+                "ipamConfig": {
+                  "type": "whereabouts",
+                  "subnets": [
+                    "198.51.100.0/24"
+                  ],
+                  "gateways": [
+                    "198.51.100.1"
+                  ],
+                  "routes": [
+                    {
+                      "dst": "203.0.113.0/24"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  "hostSnapshot": {
+    "nodeName": "worker-2",
+    "collectedAt": "2026-01-01T00:00:00Z",
+    "sources": [
+      {
+        "name": "links",
+        "status": "OK"
+      },
+      {
+        "name": "addresses",
+        "status": "OK"
+      },
+      {
+        "name": "routes",
+        "status": "OK"
+      },
+      {
+        "name": "bridge-vlans",
+        "status": "OK"
+      },
+      {
+        "name": "namespaces",
+        "status": "OK"
+      },
+      {
+        "name": "bonding",
+        "status": "Skipped",
+        "message": "no Linux bonds present"
+      },
+      {
+        "name": "ovsdb",
+        "status": "OK"
+      },
+      {
+        "name": "ovs-bonds",
+        "status": "OK",
+        "command": [
+          "ovs-appctl",
+          "bond/show"
+        ]
+      },
+      {
+        "name": "ovs-lacp",
+        "status": "OK",
+        "command": [
+          "ovs-appctl",
+          "lacp/show"
+        ]
+      },
+      {
+        "name": "ovs-flows",
+        "status": "OK",
+        "command": [
+          "ovs-ofctl",
+          "dump-flows",
+          "\u003cbridge\u003e"
+        ]
+      }
+    ]
+  },
+  "host": {
+    "snapshotNode": "worker-2",
+    "vmiNode": "worker-2",
+    "nodeMatch": true,
+    "paths": [
+      {
+        "network": "default",
+        "kind": "PodNetwork",
+        "deviceState": "NotApplicable",
+        "podPortState": "NotApplicable",
+        "notes": [
+          "the cluster network data path is CNI-specific; netdoctor checks host routes for it with diagnose --destination"
+        ]
+      },
+      {
+        "network": "data",
+        "kind": "OVS",
+        "declaredDevice": "br-data",
+        "declaredVlan": 200,
+        "declaredMtu": 9000,
+        "deviceState": "Found",
+        "device": {
+          "name": "br-data",
+          "type": "ovs-bridge",
+          "operState": "up",
+          "mtu": 9000,
+          "flows": {
+            "count": 1,
+            "hasNormal": true
+          }
+        },
+        "podPortState": "Found",
+        "podPort": {
+          "name": "veth3e9a1c7b",
+          "bridge": "br-data",
+          "tag": 200,
+          "vlanMode": "access",
+          "mtu": 9000,
+          "matchedBy": "external_ids owner+contPodUid+contIface"
+        },
+        "uplinks": [
+          {
+            "name": "bond1",
+            "type": "ovs-bond",
+            "vlans": [
+              {
+                "min": 200,
+                "max": 200
+              },
+              {
+                "min": 300,
+                "max": 300
+              }
+            ],
+            "vlanInfo": "trunk 200,300",
+            "bond": {
+              "name": "bond1",
+              "type": "ovs",
+              "mode": "balance-tcp",
+              "members": [
+                {
+                  "name": "ens1f0",
+                  "detached": false,
+                  "partnerId": "02:aa:00:00:00:01",
+                  "mtu": 9000
+                },
+                {
+                  "name": "ens1f1",
+                  "detached": false,
+                  "partnerId": "02:aa:00:00:00:01",
+                  "mtu": 1500
+                }
+              ],
+              "runtimeObserved": true
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "findings": [
+    {
+      "id": "MTU_MISMATCH",
+      "severity": "Error",
+      "category": "Confirmed",
+      "resource": "Node worker-2 (host snapshot)",
+      "summary": "Host devices on the path of network \"data\" have an MTU below 9000",
+      "evidence": [
+        "bond bond1 member ens1f1 has MTU 1500"
+      ],
+      "expected": "MTU \u003e= 9000 on every device on the path (NAD configuration)",
+      "nextAction": "Raise the MTU of the listed devices on the node (and on the switch ports), or lower the NAD MTU."
+    }
+  ],
+  "summary": {
+    "errors": 1,
+    "warnings": 0,
+    "info": 0,
+    "connectivity": "NotTested",
+    "scope": "Read-only Kubernetes API inspection plus a host snapshot of node worker-2 collected at 2026-01-01T00:00:00Z. Host state may have changed since; configuration does not prove forwarding. Guest and switch state were not observed."
+  }
+}

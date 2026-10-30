@@ -126,6 +126,7 @@ func Inspect(ctx context.Context, c *kube.Clients, target topology.Target) (*top
 	topo.Networks = res.Networks
 	topo.UnmatchedGuestInterfaces = res.UnmatchedGuestInterfaces
 	topo.GuestOnlyInterfaces = res.GuestOnlyInterfaces
+	topo.UnmatchedPodAttachments = res.UnmatchedPodAttachments
 	return topo, nil
 }
 

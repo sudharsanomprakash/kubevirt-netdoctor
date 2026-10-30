@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "netdoctor.host/v1alpha1",
+  "nodeName": "worker-3",
+  "hostname": "worker-3",
+  "collectedAt": "2026-01-01T00:00:00Z",
+  "sources": [
+    {"name": "links", "status": "OK"},
+    {"name": "addresses", "status": "OK"},
+    {"name": "routes", "status": "OK"},
+    {"name": "bridge-vlans", "status": "OK"},
+    {"name": "namespaces", "status": "OK"},
+    {"name": "bonding", "status": "Skipped", "message": "no Linux bonds present"},
+    {"name": "ovsdb", "status": "NotInstalled", "command": ["ovs-vsctl"], "message": "ovs-vsctl is not installed"}
+  ],
+  "interfaces": [
+    {"name": "eth0", "index": 2, "mtu": 1500, "mac": "02:00:00:03:00:01", "operState": "UP", "adminUp": true, "addresses": ["192.0.2.13/24"]},
+    {"name": "vxlan.calico", "index": 3, "kind": "vxlan", "mtu": 1450, "operState": "UNKNOWN", "adminUp": true}
+  ],
+  "routes": [
+    {"table": "main", "dst": "0.0.0.0/0", "gateway": "192.0.2.1", "dev": "eth0", "protocol": "static", "metric": 100},
+    {"table": "main", "dst": "192.0.2.0/24", "dev": "eth0", "protocol": "kernel"},
+    {"table": "main", "dst": "10.244.3.40/32", "dev": "cali1a2b3c4d5e6", "protocol": "boot"}
+  ]
+}

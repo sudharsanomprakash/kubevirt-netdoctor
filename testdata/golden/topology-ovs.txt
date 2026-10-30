@@ -1,0 +1,31 @@
+Topology:  VirtualMachine demo/db-03
+VMI:       phase=Running  node=worker-2
+Launcher:  virt-launcher-db-03-p8w4k
+Host:      snapshot of node worker-2 collected 2026-01-01T00:00:00Z
+
+network default {binding=masquerade, source=pod}
+  +- realized-as -> GuestInterface demo/db-03/default {infoSource=domain, guest-agent, interfaceName=enp1s0, ips=10.244.2.33, mac=02:00:00:00:00:0e}  [Observed] VMI status.interfaces
+  |  +- bound-to -> PodInterface demo/virt-launcher-db-03-p8w4k/eth0 {ips=10.244.2.33, mac=0a:58:0a:f4:02:21, network=k8s-pod-network}  [Inferred] masquerade binding: guest traffic is NATed to the pod interface address
+  |  |  +- member-of -> ClusterNetwork k8s-pod-network  [Declared] pod network (primary CNI)
+  +- attached-via -> PodInterface demo/virt-launcher-db-03-p8w4k/eth0 {ips=10.244.2.33, mac=0a:58:0a:f4:02:21, network=k8s-pod-network}  [Observed] matched by defaultFlag (shown above)
+
+network data {binding=bridge, source=multus}
+  +- realized-as -> GuestInterface demo/db-03/data {infoSource=domain, guest-agent, multus-status, interfaceName=enp2s0, ips=198.51.100.33, mac=02:00:00:00:c8:03}  [Observed] VMI status.interfaces
+  |  +- bound-to -> PodInterface demo/virt-launcher-db-03-p8w4k/pod3e9a1c7b2d0 {mac=02:00:00:00:c8:03, network=demo/ovs-vlan200}  [Inferred] bridge binding: the pod interface is bridged to the guest at layer 2
+  |  |  +- created-from -> NetworkAttachmentDefinition demo/ovs-vlan200 {cni=ovs(br=br-data,vlan=200), lookup=Found}  [Observed] network-status entry names the NAD
+  |  |  |  +- uses-host-device -> OVSBridge br-data {mtu=9000, operState=up, type=ovs-bridge}  [Declared] NAD config names "br-data"; present in the host snapshot
+  |  |  |  |  +- uplink -> HostInterface bond1 {type=ovs-bond, vlans=200,300}  [Observed] host snapshot port membership
+  |  |  |  |  |  +- is-bond -> Bond bond1 {mode=balance-tcp, type=ovs}  [Observed] host snapshot
+  |  |  |  |  |  |  +- member -> BondMember bond1/ens1f0 {partner=02:aa:00:00:00:01, state=attached}  [Observed] host snapshot bond membership
+  |  |  |  |  |  |  +- member -> BondMember bond1/ens1f1 {partner=02:aa:00:00:00:01, state=attached}  [Observed] host snapshot bond membership
+  |  |  +- plugged-into -> OVSPort veth3e9a1c7b {bridge=br-data, tag=200, vlanMode=access}  [Observed] external_ids owner+contPodUid+contIface
+  |  |  |  +- port-of -> OVSBridge br-data {mtu=9000, operState=up, type=ovs-bridge}  [Observed] OVSDB Bridge.ports (shown above)
+  +- attached-via -> PodInterface demo/virt-launcher-db-03-p8w4k/pod3e9a1c7b2d0 {mac=02:00:00:00:c8:03, network=demo/ovs-vlan200}  [Observed] matched by podInterfaceName (shown above)
+  +- references -> NetworkAttachmentDefinition demo/ovs-vlan200 {cni=ovs(br=br-data,vlan=200), lookup=Found}  [Declared] spec.networks[].multus.networkName (shown above)
+
+ABSENT (0): sources were readable but did not contain these
+
+GAPS (0): not observable
+
+Provenance: Observed = reported by the Kubernetes API or host snapshot; Declared = stated by configuration; Inferred = derived from documented behavior or matching heuristics.
+Connectivity: NOT TESTED. Read-only Kubernetes API inspection plus a host snapshot of node worker-2 collected at 2026-01-01T00:00:00Z. Host state may have changed since; configuration does not prove forwarding. Guest and switch state were not observed.

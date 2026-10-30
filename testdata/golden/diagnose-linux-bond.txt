@@ -1,0 +1,38 @@
+Target:    VirtualMachine demo/web-01
+VM:        web-01  runStrategy=Always  status=Running
+VMI:       web-01  phase=Running  node=worker-1  guestAgent=Connected
+Launcher:  virt-launcher-web-01-x7k2p  phase=Running  node=worker-1
+
+NETWORKS (2)
+  default  [pod network, binding: masquerade]
+    guest:  iface enp1s0  mac 02:00:00:00:00:0a  ips 10.244.1.15  source domain, guest-agent
+    pod:    iface eth0  network k8s-pod-network  mac 0a:58:0a:f4:01:0f  ips 10.244.1.15 (Multus network-status)
+  vlan100  [multus demo/br-vlan100, binding: bridge]
+    guest:  iface enp2s0  mac 02:00:00:00:64:01  ips 192.0.2.10  source domain, guest-agent, multus-status
+    pod:    iface pod5c6f2b9e0d1  network demo/br-vlan100  mac 02:00:00:00:64:01 (Multus network-status)
+    nad:    found; cni bridge(br=br1,vlan=100) -> tuning
+
+HOST PATH (snapshot of node worker-1, collected 2026-01-01T00:00:00Z)
+  source ovsdb: NotInstalled ovs-vsctl is not installed
+  default  [PodNetwork]
+    note: the cluster network data path is CNI-specific; netdoctor checks host routes for it with diagnose --destination
+  vlan100  [LinuxBridge br1: Found]
+    device: type linux-bridge  state UP  mtu 9000  vlan_filtering true
+    uplink: bond0 (bond, UP, mtu 9000, vlans 1,100)
+      bond linux 802.3ad: eno1 partner 02:aa:00:00:00:01; eno2 DETACHED (in aggregator 2, active aggregator is 1) partner 02:bb:00:00:00:02
+    note: the host veth of a Linux bridge attachment cannot be identified without entering the pod network namespace
+
+FINDINGS (2): 1 error(s), 1 warning(s), 0 info
+  ERROR   LACP_PARTNER_MISMATCH [Confirmed] Node worker-1 (host snapshot)
+          Members of bond "bond0" negotiated LACP with different partners
+          - partner 02:aa:00:00:00:01 via eno1
+          - partner 02:bb:00:00:00:02 via eno2
+          expected: one LACP partner system for all members (consistency between members)
+          next: Verify that all member ports are in the same LAG (or MLAG pair presenting one system ID) on the switch.
+  WARNING BOND_MEMBER_DETACHED [Confirmed] Node worker-1 (host snapshot)
+          Bond "bond0" on the path of network "vlan100" has detached members
+          - eno2: in aggregator 2, active aggregator is 1
+          expected: all members attached
+          next: Check the member links and the switch-side LAG configuration (ovs-appctl bond/show or /proc/net/bonding/bond0).
+
+Connectivity: NOT TESTED. Read-only Kubernetes API inspection plus a host snapshot of node worker-1 collected at 2026-01-01T00:00:00Z. Host state may have changed since; configuration does not prove forwarding. Guest and switch state were not observed.

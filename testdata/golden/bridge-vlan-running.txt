@@ -13,6 +13,6 @@ NETWORKS (2)
     nad:    found; cni bridge(br=br1,vlan=100) -> tuning
 
 FINDINGS (0): 0 error(s), 0 warning(s), 0 info
-  No issues were found in the inspected API state.
+  No issues were found in the inspected state.
 
 Connectivity: NOT TESTED. Read-only Kubernetes API inspection. Guest, node, OVS/bridge, host NIC and switch state were not observed.

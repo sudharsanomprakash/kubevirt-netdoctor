@@ -47,7 +47,7 @@ func runningTopology() *topology.Topology {
 	}
 }
 
-func evaluate(t *topology.Topology) []Finding { return Evaluate(t, DefaultRules()) }
+func evaluate(t *topology.Topology) []Finding { return Evaluate(&Input{Topology: t}, DefaultRules()) }
 
 func ids(fs []Finding) []string {
 	out := []string{}
@@ -369,7 +369,7 @@ func TestEvaluateOrdering(t *testing.T) {
 	if got != want {
 		t.Errorf("order = %s, want %s", got, want)
 	}
-	if empty := Evaluate(&topology.Topology{}, nil); empty == nil || len(empty) != 0 {
+	if empty := Evaluate(&Input{Topology: &topology.Topology{}}, nil); empty == nil || len(empty) != 0 {
 		t.Errorf("Evaluate must return an empty, non-nil slice: %#v", empty)
 	}
 }

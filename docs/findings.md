@@ -1,16 +1,23 @@
 # Diagnostic findings reference
 
-Every finding has a stable **ID**, a **severity** (`Error`, `Warning`, `Info`) and a
-**category** that states how certain it is:
+Every finding has a stable **ID**, a **severity** (`Error`, `Warning`, `Info`), a
+**category** (the confidence classification), the affected **resource**, observed
+**evidence**, the **expected** state when one is known (and where that expectation came
+from), and a recommended **next action**.
 
 | Category | Meaning |
 | --- | --- |
-| `Confirmed` | The Kubernetes API state directly establishes the fact (for example, a referenced object does not exist). |
-| `Suspected` | The state is consistent with a problem but has plausible benign explanations (timing, migrations, version differences). |
-| `Unavailable` | netdoctor could not observe something (RBAC denial, API not served, missing annotation, no guest agent). Related checks were skipped rather than guessed. |
+| `Confirmed` | The observed state (Kubernetes API or host snapshot) directly establishes the fact, for example a referenced object does not exist or an OVS port has a different tag than the NAD declares. |
+| `Suspected` | The state is consistent with a problem but has plausible benign explanations (timing, migrations, version differences, unobservable guest configuration). |
+| `Unavailable` | netdoctor could not observe something (RBAC denial, API not served, missing annotation, no guest agent, host source not collected). Related checks were skipped rather than guessed. |
 
-netdoctor v0.1 performs no data-plane tests. The absence of findings means only that
-the inspected API state is consistent; it does **not** mean the network works.
+Expected values come only from declared configuration (VMI spec, NAD config) or from an
+expectations file the user supplies (`diagnose --expectations`, see
+[`examples/expectations.yaml`](../examples/expectations.yaml)). LACP partner IDs are
+compared only between members of one bond or with a declared partner.
+
+netdoctor performs no data-plane tests. The absence of findings means only that the
+inspected state is consistent; it does **not** mean the network works.
 
 ## Findings
 
@@ -34,8 +41,48 @@ the inspected API state is consistent; it does **not** mean the network works.
 | `MULTUS_STATUS_UNAVAILABLE` | Info | Unavailable | Multus networks are used but the launcher pod has no `network-status` annotation. |
 | `INTERFACE_STATUS_MISMATCH` | Warning / Error | Confirmed / Suspected | For a running VMI: a spec interface is missing from status, status reports an interface absent from the spec, the reported MAC differs from `spec.macAddress`, or a network has no interface of the same name. |
 | `GUEST_IP_UNAVAILABLE` | Info | Unavailable | Interfaces report no IP and the guest agent is not connected, so in-guest addresses cannot be known. |
+| `MULTUS_ATTACHMENT_MISMATCH` | Warning | Suspected | The MAC address KubeVirt requested through Multus differs from the one network-status reports (the CNI chain may not support the `mac` capability). |
+
+### Host and OVS findings (require `--host-snapshot`, experimental)
+
+| ID | Severity | Category | Raised when |
+| --- | --- | --- | --- |
+| `HOST_SNAPSHOT_NODE_MISMATCH` | Warning | Unavailable | The snapshot's node is not the VMI's node; host checks are skipped. |
+| `HOST_COLLECTOR_UNAVAILABLE` | Warning | Unavailable | A snapshot source failed (typically for lack of privileges); dependent checks are skipped. |
+| `HOST_INTERFACE_MISSING` | Error | Confirmed | The bridge, OVS bridge or parent interface a NAD declares does not exist on the node (or OVS is not installed for an OVS NAD). |
+| `HOST_INTERFACE_DOWN` | Error / Warning | Confirmed | The declared host device is down (Error), or some (Warning) or all (Error) of its uplinks are down. |
+| `OVS_PORT_MISSING` | Error / Warning | Confirmed / Suspected | No OVS port with OVS CNI's `external_ids` (owner, `contPodUid`, `contIface`) exists for the attachment. Confirmed when Multus reports the attachment. |
+| `OVS_PORT_WRONG_BRIDGE` | Error | Confirmed | The attachment's OVS port is on a different bridge than the NAD declares. |
+| `OVS_BRIDGE_NO_FLOWS` | Warning | Confirmed | A bridge on the path is in `secure` fail mode and has no OpenFlow flows. |
+| `VLAN_MISMATCH` | Error | Confirmed | The OVS port tag or trunks differ from the NAD; no uplink of the bridge carries the VLAN (OVS trunks/tag or Linux bridge VLAN table); or the NAD's VLAN differs from the expectations file. |
+| `VLAN_NOT_ENFORCED` | Warning | Confirmed | A NAD declares VLANs on a Linux bridge whose VLAN filtering is disabled (the bridge CNI plugin enables filtering only when it creates the bridge). |
+| `MTU_MISMATCH` | Error | Confirmed | A device on the path (bridge, OVS pod port, uplink, VLAN parent, bond member) has an MTU below the NAD's or expected MTU; or the NAD MTU differs from the expectations file. |
+| `BOND_MEMBER_DETACHED` | Warning / Error | Confirmed | A bond member on the path is down, disabled, LACP-detached/defaulted/expired, or in a different 802.3ad aggregator (Error when all members are); or an expected member is missing. |
+| `LACP_PARTNER_MISMATCH` | Error | Confirmed | Members of one bond report different LACP partner system IDs, or a partner differs from the expectations file. |
+
+### Destination findings (require `--destination`)
+
+| ID | Severity | Category | Raised when |
+| --- | --- | --- | --- |
+| `ROUTE_MISSING` | Warning | Suspected | No declared IPAM subnet or route covers the destination and no pod-network binding provides a default route. The guest's own routes are not observable. |
+| `ROUTE_AMBIGUOUS` | Warning | Suspected | Equally specific candidates exist on several VM networks. |
+| `ROUTE_GATEWAY_OFFLINK` | Error | Confirmed | The selected route's gateway is outside the network's declared subnets. |
+| `HOST_ROUTE_MISSING` | Error | Confirmed | Pod-network traffic would be routed by the node, and its main routing table has no route to the destination. |
+| `HOST_ROUTE_REJECTED` | Error | Confirmed | The node's best route is a blackhole, unreachable or prohibit route. |
+| `HOST_ROUTE_EGRESS_DOWN` | Error | Confirmed | The node's route uses an interface that is down. |
+
+### Coverage
+
+| ID | Severity | Category | Raised when |
+| --- | --- | --- | --- |
+| `TOPOLOGY_INCOMPLETE` | Info | Unavailable | Parts of the path could not be observed (no launcher pod, no network-status, NAD config not inline, no host snapshot, OVS not collected, ...). Observed absences are reported by their own findings instead. |
 
 ## Correlation model
+
+For each attachment, `topology` and the JSON report record how the Multus network-status
+entry was matched (`matchedBy`): `podInterfaceName` (VMI status), `requestInterface`
+(Multus request), `defaultFlag`, or `referenceOrder`. The last is an inference and is
+shown as such.
 
 For each VMI network netdoctor records, separately and without assuming they are the
 same thing:

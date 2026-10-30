@@ -83,7 +83,8 @@
           "ips": [
             "10.244.2.21"
           ],
-          "default": true
+          "default": true,
+          "matchedBy": "defaultFlag"
         }
       },
       {
@@ -108,7 +109,8 @@
         "podAttachment": {
           "networkName": "demo/frontend-net",
           "interface": "pod1f6e3b8a2c4",
-          "mac": "02:00:00:00:0f:01"
+          "mac": "02:00:00:00:0f:01",
+          "matchedBy": "requestInterface"
         },
         "networkAttachmentDefinition": {
           "ref": {
@@ -126,7 +128,13 @@
                 "description": "Linux bridge (cnv-bridge)",
                 "role": "interface",
                 "bridge": "br-front",
-                "ipam": "whereabouts"
+                "ipam": "whereabouts",
+                "ipamConfig": {
+                  "type": "whereabouts",
+                  "subnets": [
+                    "198.51.100.0/24"
+                  ]
+                }
               }
             ]
           }

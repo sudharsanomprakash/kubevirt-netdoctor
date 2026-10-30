@@ -130,9 +130,18 @@ func TestInspectUnsupportedKind(t *testing.T) {
 // real-looking public addresses by restricting IPv4 literals in fixtures to
 // documentation and private ranges.
 func TestFixturesUseSyntheticAddresses(t *testing.T) {
-	files, err := filepath.Glob(fixture("*.yaml"))
-	if err != nil || len(files) == 0 {
-		t.Fatalf("no fixtures found: %v", err)
+	var files []string
+	for _, pattern := range []string{
+		fixture("*.yaml"),
+		filepath.Join("..", "..", "testdata", "hosts", "*.json"),
+		filepath.Join("..", "host", "testdata", "*"),
+		filepath.Join("..", "..", "examples", "*.yaml"),
+	} {
+		matches, err := filepath.Glob(pattern)
+		if err != nil || len(matches) == 0 {
+			t.Fatalf("no files match %s: %v", pattern, err)
+		}
+		files = append(files, matches...)
 	}
 	for _, f := range files {
 		data, err := os.ReadFile(f)

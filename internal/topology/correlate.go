@@ -33,6 +33,9 @@ type CorrelationResult struct {
 	Networks                 []NetworkPath
 	UnmatchedGuestInterfaces []GuestInterface
 	GuestOnlyInterfaces      []GuestInterface
+	// UnmatchedPodAttachments are network-status entries not attributed to
+	// any VMI network.
+	UnmatchedPodAttachments []PodAttachment
 }
 
 // MultusRefs returns the distinct NADs referenced by the spec, in spec order.
@@ -100,7 +103,7 @@ func Correlate(in CorrelationInput) CorrelationResult {
 		case n.Pod != nil:
 			path.Source = SourcePod
 			if idx := findStatus(in.Pod.Statuses, usedStatuses, func(s multus.NetworkStatus) bool { return s.Default }); idx >= 0 {
-				path.PodAttachment = podAttachment(in.Pod.Statuses[idx])
+				path.PodAttachment = podAttachment(in.Pod.Statuses[idx], MatchDefaultFlag)
 			}
 		case n.Multus != nil:
 			path.Source = SourceMultus
@@ -114,6 +117,12 @@ func Correlate(in CorrelationInput) CorrelationResult {
 			correlatePodAttachment(&path, ref, n.Multus.Default, podIfaceHint, in, usedSelections, usedStatuses)
 		}
 		res.Networks = append(res.Networks, path)
+	}
+
+	for i, st := range in.Pod.Statuses {
+		if !usedStatuses[i] {
+			res.UnmatchedPodAttachments = append(res.UnmatchedPodAttachments, *podAttachment(st, ""))
+		}
 	}
 
 	if in.Status != nil {
@@ -137,7 +146,7 @@ func correlatePodAttachment(path *NetworkPath, ref multus.NetworkRef, isDefault 
 		// A Multus default network replaces the cluster network and is not
 		// listed in the networks annotation.
 		if idx := findStatus(in.Pod.Statuses, usedStatuses, matchesRef); idx >= 0 {
-			path.PodAttachment = podAttachment(in.Pod.Statuses[idx])
+			path.PodAttachment = podAttachment(in.Pod.Statuses[idx], MatchDefaultFlag)
 		}
 		return
 	}
@@ -153,13 +162,13 @@ func correlatePodAttachment(path *NetworkPath, ref multus.NetworkRef, isDefault 
 		selIdx = i
 		break
 	}
-	podIface := podIfaceHint
+	podIface, method := podIfaceHint, MatchPodInterfaceName
 	if selIdx >= 0 {
 		usedSelections[selIdx] = true
 		sel := in.Pod.Selections[selIdx]
 		path.PodRequest = &PodRequest{Interface: sel.Interface, MAC: sel.MAC}
 		if podIface == "" {
-			podIface = sel.Interface
+			podIface, method = sel.Interface, MatchRequestInterface
 		}
 	}
 
@@ -169,10 +178,10 @@ func correlatePodAttachment(path *NetworkPath, ref multus.NetworkRef, isDefault 
 			return matchesRef(s) && s.Interface == podIface
 		})
 	} else {
-		idx = findStatus(in.Pod.Statuses, usedStatuses, matchesRef)
+		idx, method = findStatus(in.Pod.Statuses, usedStatuses, matchesRef), MatchReferenceOrder
 	}
 	if idx >= 0 {
-		path.PodAttachment = podAttachment(in.Pod.Statuses[idx])
+		path.PodAttachment = podAttachment(in.Pod.Statuses[idx], method)
 	}
 }
 
@@ -221,6 +230,6 @@ func guestInterface(s kubevirt.InterfaceStatus) GuestInterface {
 	}
 }
 
-func podAttachment(s multus.NetworkStatus) *PodAttachment {
-	return &PodAttachment{NetworkName: s.Name, Interface: s.Interface, MAC: s.MAC, IPs: s.IPs, Default: s.Default}
+func podAttachment(s multus.NetworkStatus, method string) *PodAttachment {
+	return &PodAttachment{NetworkName: s.Name, Interface: s.Interface, MAC: s.MAC, IPs: s.IPs, Default: s.Default, MatchedBy: method}
 }

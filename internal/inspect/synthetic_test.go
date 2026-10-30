@@ -8,6 +8,8 @@ import (
 var ipv4Pattern = regexp.MustCompile(`\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b`)
 
 var syntheticPrefixes = []netip.Prefix{
+	netip.MustParsePrefix("0.0.0.0/32"),  // unspecified (default route prefix)
+	netip.MustParsePrefix("127.0.0.0/8"), // loopback
 	netip.MustParsePrefix("10.0.0.0/8"),
 	netip.MustParsePrefix("172.16.0.0/12"),
 	netip.MustParsePrefix("192.168.0.0/16"),

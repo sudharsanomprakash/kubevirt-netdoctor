@@ -1,0 +1,3 @@
+{"data":[[["uuid","b1"],"br-data",["set",[["uuid","p1"],["uuid","p2"],["uuid","p3"]]],["set",[]],""],
+         [["uuid","b2"],"br-secure",["set",[["uuid","p4"]]],"secure",""]],
+ "headings":["_uuid","name","ports","fail_mode","datapath_type"]}

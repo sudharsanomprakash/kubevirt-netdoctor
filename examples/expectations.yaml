@@ -1,0 +1,11 @@
+# Optional expectations for "kubectl netdoctor diagnose --expectations".
+# netdoctor never guesses these values; checks against them run only when
+# they are declared here (or in the NAD configuration).
+networks:
+  data:                 # VMI spec.networks[].name
+    vlan: 200
+    mtu: 9000
+bonds:
+  bond1:                # Linux bond or OVS bond port on the VM's node
+    partnerSystemID: "02:aa:00:00:00:01"
+    members: [ens1f0, ens1f1]

@@ -20,6 +20,10 @@ make race         # tests with the race detector
 make lint         # golangci-lint
 ```
 
+`make integration` runs the host collector against real iproute2 output in a
+disposable network namespace (requires root and iproute2; it removes everything it
+creates). No cluster is required for any test.
+
 No cluster is required for the test suite. Discovery is tested against fake
 Kubernetes clients loaded from the YAML fixtures in `testdata/fixtures`.
 
@@ -34,9 +38,15 @@ Kubernetes clients loaded from the YAML fixtures in `testdata/fixtures`.
 | `internal/multus` | Multus annotations, NAD lookup, CNI config parsing |
 | `internal/topology` | Observed topology model and per-network correlation |
 | `internal/inspect` | Orchestrates read-only discovery into a topology |
+| `internal/host` | Host snapshot model, iproute2/OVS parsers, opt-in collector |
+| `internal/hostpath` | Correlates a host snapshot with the topology |
+| `internal/route` | Destination and route analysis |
+| `internal/expect` | User-declared expectations |
+| `internal/graph` | Topology graph with provenance |
 | `internal/diagnose` | Findings engine and rules |
 | `internal/output` | Text and JSON rendering |
 | `testdata/fixtures` | Synthetic cluster state used by tests |
+| `testdata/hosts` | Synthetic baseline host snapshots (scenarios mutate them in tests) |
 | `testdata/golden` | Expected CLI output |
 
 ## Writing diagnostic rules
@@ -52,9 +62,13 @@ overstating what was observed. When adding or changing a rule:
    benign explanations (timing, version differences).
 3. **Never report connectivity as working.** netdoctor does not send traffic.
 4. **Include evidence and a concrete next action** in every finding.
-5. **Keep finding IDs stable.** They are part of the JSON contract. Document new IDs
+5. **Never invent expected values.** Compare against declared configuration (VMI spec,
+   NAD) or the user's expectations file, and state the source in `Expected`.
+6. **Host collector changes** must keep commands read-only, fixed and shell-free; any
+   new command needs a documented reason and an allowlist test.
+7. **Keep finding IDs stable.** They are part of the JSON contract. Document new IDs
    in `docs/findings.md`.
-6. Add unit tests in `internal/diagnose` and, where useful, a fixture plus golden test.
+8. Add unit tests in `internal/diagnose` and, where useful, a fixture plus golden test.
 
 ## Golden files
 
