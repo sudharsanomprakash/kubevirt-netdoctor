@@ -11,6 +11,30 @@ report schema; such changes are called out here.
 
 ### Added
 
+- `kubectl netdoctor topology`: graph of the VM network path with every relationship
+  labeled Observed, Declared or Inferred, plus explicit gaps and absences.
+- `kubectl netdoctor diagnose`: all rules, with `--host-snapshot`, `--expectations` and
+  `--destination` (configuration and route analysis only; no traffic is sent).
+- `kubectl netdoctor host collect` (experimental): opt-in, read-only node collector for
+  Linux links, addresses, routes, bridge VLANs, bonds (including LACP partners) and OVS
+  bridges, ports, interfaces, bonds, LACP and flow summaries.
+- Host correlation: Linux bridge and macvlan parents, uplinks, VLAN sub-interfaces,
+  Linux and OVS bonds, and OVS CNI ports identified by their `external_ids`.
+- NAD parsing of IPAM subnets, gateways, routes and static addresses (host-local,
+  static, whereabouts) and of VLAN trunk ranges.
+- Attachment matching method (`matchedBy`) and unmatched Multus entries in the topology.
+- Findings: `expected` field, and 20 new finding IDs for Multus MAC mismatches, host
+  devices, OVS ports and flows, VLAN, MTU, bonds and LACP, routes and topology coverage.
+- `docs/gap-analysis.md`: capability audit and comparison with existing tools.
+
+### Changed
+
+- The text report says "No issues were found in the inspected state" (was "inspected
+  API state").
+- `diagnose.Evaluate` takes a `diagnose.Input` (internal API).
+
+### v0.1 foundation
+
 - `kubectl netdoctor inspect vm/<name>` and `inspect vmi/<name>` with text and JSON output.
 - `kubectl netdoctor version`.
 - Read-only discovery of VirtualMachines, VirtualMachineInstances, virt-launcher pods

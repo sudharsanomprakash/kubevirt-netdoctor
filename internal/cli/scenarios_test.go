@@ -102,6 +102,14 @@ func TestDiagnoseScenarios(t *testing.T) {
 			args: []string{"vm/web-01"}, wantIDs: []string{"BOND_MEMBER_DETACHED", "LACP_PARTNER_MISMATCH"}, golden: "diagnose-linux-bond.json",
 		},
 		{
+			name: "linux bond text output", fixture: "bridge-vlan-running.yaml", snapshot: "worker-1-linux-bridge.json",
+			mutate: func(s *host.Snapshot) {
+				m := s.FindInterface("eno2").BondMember
+				m.AggregatorID, m.PartnerMAC = 2, "02:bb:00:00:00:02"
+			},
+			args: []string{"vm/web-01", "-o", "text"}, golden: "diagnose-linux-bond.txt",
+		},
+		{
 			name: "ovs vlan attachment healthy", fixture: "ovs-vlan-running.yaml", snapshot: "worker-2-ovs.json",
 			args: []string{"vm/db-03", "--destination", "203.0.113.9", "-o", "text"}, wantIDs: nil, golden: "diagnose-ovs-healthy.txt",
 		},

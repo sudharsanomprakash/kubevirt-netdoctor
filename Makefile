@@ -9,7 +9,7 @@ LDFLAGS := -s -w \
 	-X $(PKG)/internal/version.Date=$(DATE)
 PLATFORMS := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64
 
-.PHONY: all build test race vet fmt lint golden dist clean
+.PHONY: all build test race vet fmt lint golden integration dist clean
 
 all: fmt vet lint test build
 
@@ -30,6 +30,9 @@ fmt:
 
 lint: ## Requires golangci-lint v2
 	golangci-lint run ./...
+
+integration: ## Host collector test against real iproute2 in a disposable netns (root)
+	./hack/integration-netns.sh
 
 golden: ## Regenerate CLI golden files after an intended output change
 	go test ./internal/cli -update
