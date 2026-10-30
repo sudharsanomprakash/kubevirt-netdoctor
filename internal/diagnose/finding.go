@@ -2,8 +2,9 @@
 // and produces structured findings.
 //
 // Every finding states how certain it is (Category). Rules only make claims
-// that the Kubernetes API state supports; they never report connectivity as
-// working or broken, because v0.1 performs no data-plane tests.
+// that the observed state (Kubernetes API, host snapshot) or declared
+// configuration supports; they never report connectivity as working or
+// broken, because netdoctor performs no data-plane tests.
 package diagnose
 
 import (
