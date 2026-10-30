@@ -27,11 +27,19 @@ report schema; such changes are called out here.
   devices, OVS ports and flows, VLAN, MTU, bonds and LACP, routes and topology coverage.
 - `docs/gap-analysis.md`: capability audit and comparison with existing tools.
 
+- `ROUTE_UNDETERMINED` and `HOST_SNAPSHOT_HOSTNAME_MISMATCH`; `host collect` refuses a
+  `--node-name` that does not match the host unless `--allow-node-name-mismatch` is set.
+- Topology explains the launcher pod's cluster-network interface when the VMI does not
+  use the pod network.
+
 ### Changed
 
 - The text report says "No issues were found in the inspected state" (was "inspected
   API state").
 - `diagnose.Evaluate` takes a `diagnose.Input` (internal API).
+- Route analysis no longer reports `ROUTE_MISSING` when addressing is configured inside
+  the guest; it reports `ROUTE_UNDETERMINED` instead.
+- Route parsing accepts numeric protocol and table values from iproute2.
 
 ### v0.1 foundation
 

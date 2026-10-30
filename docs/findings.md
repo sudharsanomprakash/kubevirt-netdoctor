@@ -48,6 +48,7 @@ inspected state is consistent; it does **not** mean the network works.
 | ID | Severity | Category | Raised when |
 | --- | --- | --- | --- |
 | `HOST_SNAPSHOT_NODE_MISMATCH` | Warning | Unavailable | The snapshot's node is not the VMI's node; host checks are skipped. |
+| `HOST_SNAPSHOT_HOSTNAME_MISMATCH` | Warning | Suspected | The snapshot's hostname does not agree with its node name (collected with `--allow-node-name-mismatch`); host findings may describe another machine. |
 | `HOST_COLLECTOR_UNAVAILABLE` | Warning | Unavailable | A snapshot source failed (typically for lack of privileges); dependent checks are skipped. |
 | `HOST_INTERFACE_MISSING` | Error | Confirmed | The bridge, OVS bridge or parent interface a NAD declares does not exist on the node (or OVS is not installed for an OVS NAD). |
 | `HOST_INTERFACE_DOWN` | Error / Warning | Confirmed | The declared host device is down (Error), or some (Warning) or all (Error) of its uplinks are down. |
@@ -65,6 +66,7 @@ inspected state is consistent; it does **not** mean the network works.
 | ID | Severity | Category | Raised when |
 | --- | --- | --- | --- |
 | `ROUTE_MISSING` | Warning | Suspected | No declared IPAM subnet or route covers the destination and no pod-network binding provides a default route. The guest's own routes are not observable. |
+| `ROUTE_UNDETERMINED` | Info | Unavailable | No candidate exists, but some VM networks have guest-configured addressing (no NAD IPAM). KubeVirt reports guest IPs without prefix lengths, so their reachability cannot be evaluated. |
 | `ROUTE_AMBIGUOUS` | Warning | Suspected | Equally specific candidates exist on several VM networks. |
 | `ROUTE_GATEWAY_OFFLINK` | Error | Confirmed | The selected route's gateway is outside the network's declared subnets. |
 | `HOST_ROUTE_MISSING` | Error | Confirmed | Pod-network traffic would be routed by the node, and its main routing table has no route to the destination. |

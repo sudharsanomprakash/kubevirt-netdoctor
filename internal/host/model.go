@@ -6,6 +6,8 @@
 // collection time. It does not prove that packets are forwarded.
 package host
 
+import "strings"
+
 // SchemaVersion versions the snapshot file format.
 const SchemaVersion = "netdoctor.host/v1alpha1"
 
@@ -246,6 +248,21 @@ const (
 	ExternalIDContIface = "contIface"
 	ExternalIDContNetns = "contNetns"
 )
+
+// NamesAgree reports whether a Kubernetes node name plausibly refers to the
+// host with the given hostname: their first DNS labels must match, ignoring
+// case ("worker-1.example.internal" agrees with "worker-1"). An unknown
+// hostname is treated as agreeing.
+func NamesAgree(nodeName, hostname string) bool {
+	if hostname == "" {
+		return true
+	}
+	first := func(s string) string {
+		label, _, _ := strings.Cut(s, ".")
+		return strings.ToLower(label)
+	}
+	return first(nodeName) == first(hostname)
+}
 
 // FindInterface returns the Linux interface with the given name.
 func (s *Snapshot) FindInterface(name string) *Interface {

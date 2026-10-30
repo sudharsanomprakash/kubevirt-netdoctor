@@ -59,8 +59,19 @@ type Analysis struct {
 	// Selected is the longest-prefix candidate when it is unique.
 	Selected  *Candidate `json:"selected,omitempty"`
 	Ambiguous bool       `json:"ambiguous,omitempty"`
-	Host      *HostRoute `json:"host,omitempty"`
-	Notes     []string   `json:"notes"`
+	// Undeclared lists networks whose guest addresses are known but whose
+	// prefixes and routes are not declared anywhere (no NAD IPAM), so they
+	// cannot be evaluated against the destination.
+	Undeclared []UndeclaredNetwork `json:"undeclared,omitempty"`
+	Host       *HostRoute          `json:"host,omitempty"`
+	Notes      []string            `json:"notes"`
+}
+
+// UndeclaredNetwork is a VM network with guest-configured addressing.
+type UndeclaredNetwork struct {
+	Network  string   `json:"network"`
+	GuestIPs []string `json:"guestIPs"`
+	Reason   string   `json:"reason"`
 }
 
 // HostRoute is the node routing table lookup.
@@ -99,6 +110,12 @@ func Analyze(t *topology.Topology, dest netip.Addr, snap *host.Snapshot) *Analys
 	}
 	for _, n := range t.Networks {
 		a.Candidates = append(a.Candidates, candidatesFor(n, dest)...)
+		if u, ok := undeclared(n, dest); ok {
+			a.Undeclared = append(a.Undeclared, u)
+		}
+	}
+	if len(a.Undeclared) > 0 && len(a.Candidates) > 0 {
+		a.Notes = append(a.Notes, "some networks have guest-configured addressing with unknown prefixes; one of them may offer a more specific path than the selected candidate")
 	}
 	sort.SliceStable(a.Candidates, func(i, j int) bool { return a.Candidates[i].prefixLen > a.Candidates[j].prefixLen })
 
@@ -197,6 +214,37 @@ func guestEvidence(n topology.NetworkPath, subnets []netip.Prefix) string {
 		}
 	}
 	return fmt.Sprintf("the guest reports %s, outside the declared subnets", strings.Join(n.Guest.IPs, ", "))
+}
+
+// undeclared reports a network whose guest addresses (of the destination's
+// family) are known but whose addressing is not declared by NAD IPAM.
+// KubeVirt reports guest IPs without prefix lengths, so such a network can be
+// neither confirmed nor excluded as a path.
+func undeclared(n topology.NetworkPath, dest netip.Addr) (UndeclaredNetwork, bool) {
+	if n.Source != topology.SourceMultus || n.Guest == nil {
+		return UndeclaredNetwork{}, false
+	}
+	var reason string
+	switch {
+	case n.NAD == nil || n.NAD.Config == nil:
+		reason = "NAD configuration unavailable"
+	case n.NAD.Config.Primary() == nil || n.NAD.Config.Primary().IPAMConfig == nil:
+		reason = "NAD declares no IPAM; addressing is configured in the guest"
+	case len(n.NAD.Config.Primary().IPAMConfig.Subnets) == 0:
+		reason = fmt.Sprintf("IPAM type %q declares no subnets", n.NAD.Config.Primary().IPAMConfig.Type)
+	default:
+		return UndeclaredNetwork{}, false
+	}
+	var ips []string
+	for _, ip := range n.Guest.IPs {
+		if a, err := netip.ParseAddr(ip); err == nil && a.Is4() == dest.Is4() && !a.IsLinkLocalUnicast() {
+			ips = append(ips, ip)
+		}
+	}
+	if len(ips) == 0 {
+		return UndeclaredNetwork{}, false
+	}
+	return UndeclaredNetwork{Network: n.Name, GuestIPs: ips, Reason: reason}, true
 }
 
 func firstGatewayFor(gws []string, dest netip.Addr) string {
