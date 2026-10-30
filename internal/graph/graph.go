@@ -318,7 +318,11 @@ func (b *builder) hostPath(t *topology.Topology, p *hostpath.NetworkPath) {
 		portID := b.node(KindOVSPort, pp.Name, attrs)
 		for _, n := range t.Networks {
 			if n.Name == p.Network && n.PodAttachment != nil {
-				b.edge(KindPodIface+"/"+podKey(t, n.PodAttachment.Interface), portID, "plugged-into", Observed, pp.MatchedBy)
+				prov := Observed
+				if p.PodPortIdentification == hostpath.IdentifiedByInterfaceName {
+					prov = Inferred
+				}
+				b.edge(KindPodIface+"/"+podKey(t, n.PodAttachment.Interface), portID, "plugged-into", prov, pp.MatchedBy)
 			}
 		}
 		b.edge(portID, b.node(KindOVSBridge, pp.Bridge, nil), "port-of", Observed, "OVSDB Bridge.ports")

@@ -52,7 +52,7 @@ inspected state is consistent; it does **not** mean the network works.
 | `HOST_COLLECTOR_UNAVAILABLE` | Warning | Unavailable | A snapshot source failed (typically for lack of privileges); dependent checks are skipped. |
 | `HOST_INTERFACE_MISSING` | Error | Confirmed | The bridge, OVS bridge or parent interface a NAD declares does not exist on the node (or OVS is not installed for an OVS NAD). |
 | `HOST_INTERFACE_DOWN` | Error / Warning | Confirmed | The declared host device is down (Error), or some (Warning) or all (Error) of its uplinks are down. |
-| `OVS_PORT_MISSING` | Error / Warning | Confirmed / Suspected | No OVS port with OVS CNI's `external_ids` (owner, `contPodUid`, `contIface`) exists for the attachment. Confirmed when Multus reports the attachment. |
+| `OVS_PORT_MISSING` | Error / Warning | Confirmed / Suspected | No OVS port created by OVS CNI exists for the attachment. Confirmed (Error) only when the node's OVS CNI records pod UIDs (`external_ids:contPodUid`) and Multus reports the attachment. With OVS CNI versions that do not record pod UIDs the port is matched by `contIface`, which KubeVirt derives from the network name, so the result is Suspected; if several ports match, the port is reported as unidentifiable (a topology gap) instead. |
 | `OVS_PORT_WRONG_BRIDGE` | Error | Confirmed | The attachment's OVS port is on a different bridge than the NAD declares. |
 | `OVS_BRIDGE_NO_FLOWS` | Warning | Confirmed | A bridge on the path is in `secure` fail mode and has no OpenFlow flows. |
 | `VLAN_MISMATCH` | Error | Confirmed | The OVS port tag or trunks differ from the NAD; no uplink of the bridge carries the VLAN (OVS trunks/tag or Linux bridge VLAN table); or the NAD's VLAN differs from the expectations file. |

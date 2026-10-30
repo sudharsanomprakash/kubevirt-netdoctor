@@ -351,8 +351,9 @@ not correlated (`HOST_SNAPSHOT_NODE_MISMATCH`).
 
 - No packet probes, captures or OpenFlow tracing; nothing proves forwarding.
 - Pod and guest network namespaces are not entered. The host veth of a Linux bridge
-  attachment therefore cannot be tied to a specific pod (OVS CNI ports can, through
-  their `external_ids`).
+  attachment therefore cannot be tied to a specific pod. OVS CNI ports can, exactly
+  when OVS CNI records the pod UID in `external_ids`; with older OVS CNI versions the
+  match is by interface name and is reported as Inferred.
 - Host route analysis uses the main table only; policy routing and VRFs are not
   evaluated. The cluster network's own data path (Calico, OVN-Kubernetes, ...) is
   CNI-specific and not modeled beyond the node routing table.

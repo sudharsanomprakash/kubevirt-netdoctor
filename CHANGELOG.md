@@ -40,6 +40,9 @@ report schema; such changes are called out here.
 - Route analysis no longer reports `ROUTE_MISSING` when addressing is configured inside
   the guest; it reports `ROUTE_UNDETERMINED` instead.
 - Route parsing accepts numeric protocol and table values from iproute2.
+- OVS CNI port identification works with OVS CNI versions that do not record pod
+  UIDs (interface-name match, reported as Inferred); `OVS_PORT_MISSING` is Confirmed
+  only when pod UIDs are recorded. OVS internal ports are no longer treated as uplinks.
 
 ### v0.1 foundation
 

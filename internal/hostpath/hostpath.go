@@ -64,9 +64,12 @@ type NetworkPath struct {
 	DeviceReason string      `json:"deviceReason,omitempty"`
 	Device       *DeviceView `json:"device,omitempty"`
 	// PodPort is the OVS port created for this attachment (OVS only).
-	PodPortState string       `json:"podPortState"`
-	PodPort      *OVSPortView `json:"podPort,omitempty"`
-	Uplinks      []Uplink     `json:"uplinks,omitempty"`
+	PodPortState string `json:"podPortState"`
+	// PodPortIdentification says how strongly the pod port could be
+	// identified (OVS only): PodUID, InterfaceName or Unavailable.
+	PodPortIdentification string       `json:"podPortIdentification,omitempty"`
+	PodPort               *OVSPortView `json:"podPort,omitempty"`
+	Uplinks               []Uplink     `json:"uplinks,omitempty"`
 	// Notes record visibility limitations for this path.
 	Notes []string `json:"notes,omitempty"`
 }
@@ -338,13 +341,24 @@ func correlateOVS(p *NetworkPath, n topology.NetworkPath, snap *host.Snapshot, p
 		}
 		for _, name := range br.Ports {
 			port := ovs.FindPort(name)
-			if port == nil || port.Name == br.Name || port.ExternalIDs[host.ExternalIDOwner] == host.OVSCNIOwner {
+			if port == nil || port.Name == br.Name || isCNIPort(port) || isInternalPort(port, ovs) {
 				continue
 			}
 			p.Uplinks = append(p.Uplinks, ovsUplink(port, snap))
 		}
 	}
 	correlateOVSPodPort(p, n, ovs, podUID)
+}
+
+// isInternalPort reports whether a port is an OVS internal interface (a
+// host-local endpoint such as a management interface), which is not a path
+// off the node.
+func isInternalPort(port *host.OVSPort, ovs *host.OVS) bool {
+	if len(port.Interfaces) != 1 {
+		return false
+	}
+	iface := ovs.FindInterface(port.Interfaces[0])
+	return iface != nil && iface.Type == "internal"
 }
 
 func ovsUplink(port *host.OVSPort, snap *host.Snapshot) Uplink {
@@ -416,9 +430,23 @@ func ovsBond(port *host.OVSPort, snap *host.Snapshot) *Bond {
 	return bond
 }
 
+// Pod port identification methods.
+const (
+	// IdentifiedByPodUID: the node's OVS CNI records the pod UID
+	// (external_ids contPodUid), so the match is exact.
+	IdentifiedByPodUID = "PodUID"
+	// IdentifiedByInterfaceName: the node's OVS CNI does not record pod UIDs;
+	// the port is matched by the pod interface name (contIface) alone. KubeVirt
+	// derives that name from the VMI network name, so VMs on the same node
+	// that share a network name produce identical names: this is an inference.
+	IdentifiedByInterfaceName = "InterfaceName"
+	// IdentificationUnavailable: no port carries OVS CNI external_ids.
+	IdentificationUnavailable = "Unavailable"
+)
+
 // correlateOVSPodPort finds the port OVS CNI created for this attachment.
-// OVS CNI tags its ports with external_ids owner, contPodUid and contIface,
-// so the match is exact when the pod interface name is known.
+// OVS CNI tags its ports with external_ids; which keys are present depends
+// on the OVS CNI version, so the strength of the match is recorded.
 func correlateOVSPodPort(p *NetworkPath, n topology.NetworkPath, ovs *host.OVS, podUID string) {
 	if podUID == "" {
 		p.PodPortState = Unknown
@@ -429,35 +457,75 @@ func correlateOVSPodPort(p *NetworkPath, n topology.NetworkPath, ovs *host.OVS, 
 	if n.PodAttachment != nil {
 		contIface = n.PodAttachment.Interface
 	}
-	var matches []*host.OVSPort
+
+	var cniPorts []*host.OVSPort
+	podUIDRecorded := false
 	for i := range ovs.Ports {
 		port := &ovs.Ports[i]
-		ids := port.ExternalIDs
-		if ids[host.ExternalIDOwner] != host.OVSCNIOwner || ids[host.ExternalIDPodUID] != podUID {
+		if !isCNIPort(port) {
 			continue
 		}
-		if contIface != "" && ids[host.ExternalIDContIface] != contIface {
-			continue
+		cniPorts = append(cniPorts, port)
+		if port.ExternalIDs[host.ExternalIDPodUID] != "" {
+			podUIDRecorded = true
 		}
-		matches = append(matches, port)
+	}
+
+	var matches []*host.OVSPort
+	switch {
+	case len(cniPorts) == 0:
+		// OVS CNI tags every port it creates (it needs contIface/contNetns to
+		// delete it), so no tagged port at all means none exists on this node.
+		p.PodPortState, p.PodPortIdentification = Missing, IdentificationUnavailable
+		p.Notes = append(p.Notes, "no OVS port on this node carries OVS CNI external_ids (owner/contIface)")
+		return
+	case podUIDRecorded:
+		p.PodPortIdentification = IdentifiedByPodUID
+		for _, port := range cniPorts {
+			ids := port.ExternalIDs
+			if ids[host.ExternalIDPodUID] == podUID && (contIface == "" || ids[host.ExternalIDContIface] == contIface) {
+				matches = append(matches, port)
+			}
+		}
+	default:
+		p.PodPortIdentification = IdentifiedByInterfaceName
+		p.Notes = append(p.Notes, "the node's OVS CNI does not record pod UIDs (external_ids contPodUid); the port is matched by pod interface name only")
+		if contIface == "" {
+			p.PodPortState = Unknown
+			p.Notes = append(p.Notes, "the pod interface name is unknown, so the port cannot be matched")
+			return
+		}
+		for _, port := range cniPorts {
+			if port.ExternalIDs[host.ExternalIDContIface] == contIface {
+				matches = append(matches, port)
+			}
+		}
 	}
 	sort.Slice(matches, func(i, j int) bool { return matches[i].Name < matches[j].Name })
+
 	switch {
 	case len(matches) == 0:
 		p.PodPortState = Missing
 		return
 	case len(matches) > 1:
 		p.PodPortState = Unknown
-		p.Notes = append(p.Notes, fmt.Sprintf("%d OVS CNI ports belong to the launcher pod and the pod interface name is unknown", len(matches)))
+		var names []string
+		for _, m := range matches {
+			names = append(names, m.Name)
+		}
+		p.Notes = append(p.Notes, fmt.Sprintf("%d OVS CNI ports match (%s); other VMs on this node may use the same network name",
+			len(matches), strings.Join(names, ", ")))
 		return
 	}
 	port := matches[0]
-	view := &OVSPortView{
-		Name: port.Name, Bridge: port.Bridge, Tag: port.Tag, Trunks: port.Trunks, VLANMode: port.VLANMode,
-		MatchedBy: "external_ids owner+contPodUid",
-	}
-	if contIface != "" {
-		view.MatchedBy += "+contIface"
+	view := &OVSPortView{Name: port.Name, Bridge: port.Bridge, Tag: port.Tag, Trunks: port.Trunks, VLANMode: port.VLANMode}
+	if p.PodPortIdentification == IdentifiedByPodUID {
+		view.MatchedBy = "external_ids contPodUid"
+		if contIface != "" {
+			view.MatchedBy += "+contIface"
+		}
+	} else {
+		view.MatchedBy = "external_ids contIface only (inferred: pod UID not recorded)"
 	}
 	if len(port.Interfaces) == 1 {
 		if iface := ovs.FindInterface(port.Interfaces[0]); iface != nil {
@@ -470,6 +538,16 @@ func correlateOVSPodPort(p *NetworkPath, n topology.NetworkPath, ovs *host.OVS, 
 		return
 	}
 	p.PodPortState = Found
+}
+
+// isCNIPort reports whether a port was created by OVS CNI. Current releases
+// set external_ids owner; older ones are recognized by contIface/contNetns.
+func isCNIPort(port *host.OVSPort) bool {
+	ids := port.ExternalIDs
+	if ids[host.ExternalIDOwner] == host.OVSCNIOwner {
+		return true
+	}
+	return ids[host.ExternalIDOwner] == "" && ids[host.ExternalIDContIface] != "" && ids[host.ExternalIDContNetns] != ""
 }
 
 func contains(list []string, s string) bool {
