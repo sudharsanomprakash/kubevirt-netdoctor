@@ -10,6 +10,7 @@ import (
 // Finding IDs for destination analysis.
 const (
 	IDRouteMissing        = "ROUTE_MISSING"
+	IDRouteUndetermined   = "ROUTE_UNDETERMINED"
 	IDRouteAmbiguous      = "ROUTE_AMBIGUOUS"
 	IDRouteGatewayOffLink = "ROUTE_GATEWAY_OFFLINK"
 	IDHostRouteMissing    = "HOST_ROUTE_MISSING"
@@ -30,6 +31,19 @@ func checkRoute(in *Input) []Finding {
 	res := vmiResource(in.Topology)
 	var out []Finding
 	switch {
+	case len(a.Candidates) == 0 && len(a.Undeclared) > 0:
+		var ev []string
+		for _, u := range a.Undeclared {
+			ev = append(ev, fmt.Sprintf("network %q: guest reports %s; %s", u.Network, strings.Join(u.GuestIPs, ", "), u.Reason))
+		}
+		ev = append(ev, "KubeVirt reports guest addresses without prefix lengths, so on-link reachability cannot be evaluated")
+		out = append(out, Finding{
+			ID: IDRouteUndetermined, Severity: SeverityInfo, Category: Unavailable, Resource: res,
+			Summary:  fmt.Sprintf("The path to %s cannot be determined from configuration; addressing is configured inside the guest", a.Destination),
+			Evidence: ev,
+			NextAction: "Check inside the guest: ip route get " + a.Destination +
+				" (or use the guest agent), and the switch/VLAN the destination is on.",
+		})
 	case len(a.Candidates) == 0:
 		out = append(out, Finding{
 			ID: IDRouteMissing, Severity: SeverityWarning, Category: Suspected, Resource: res,

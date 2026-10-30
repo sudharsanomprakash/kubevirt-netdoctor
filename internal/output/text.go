@@ -320,6 +320,9 @@ func writeRoute(p *printer, a *route.Analysis) {
 	default:
 		p.line("  selected:  none (no candidate)")
 	}
+	for _, u := range a.Undeclared {
+		p.line("  undeclared: network %s, guest %s (%s)", u.Network, strings.Join(u.GuestIPs, ", "), u.Reason)
+	}
 	for _, c := range a.Candidates {
 		gw := ""
 		if c.Gateway != "" {

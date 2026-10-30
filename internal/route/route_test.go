@@ -142,3 +142,21 @@ func TestHostLookup(t *testing.T) {
 		t.Errorf("layer-2 secondary network must not use the node routing table: %+v", l2.Host)
 	}
 }
+
+func TestAnalyzeUndeclaredAddressing(t *testing.T) {
+	n := multusNet(t, "net-0", `{"cniVersion":"0.4.0","type":"ovs","bridge":"br-trunk","vlan":30}`, "192.0.2.21", "fe80::1")
+	a := Analyze(topo(n), netip.MustParseAddr("192.0.2.51"), nil)
+	if len(a.Candidates) != 0 || len(a.Undeclared) != 1 || a.Undeclared[0].GuestIPs[0] != "192.0.2.21" || len(a.Undeclared[0].GuestIPs) != 1 {
+		t.Fatalf("analysis: %+v", a)
+	}
+	// With a pod network present, a candidate exists but the note warns
+	// that the undeclared network may be more specific.
+	a = Analyze(topo(podNet("masquerade"), n), netip.MustParseAddr("192.0.2.51"), nil)
+	if a.Selected == nil || len(a.Undeclared) != 1 || !strings.Contains(strings.Join(a.Notes, " "), "more specific path") {
+		t.Errorf("analysis with pod network: %+v", a)
+	}
+	// IPv6 destinations ignore the IPv4 guest address and link-local addresses.
+	if a := Analyze(topo(n), netip.MustParseAddr("2001:db8::5"), nil); len(a.Undeclared) != 0 {
+		t.Errorf("ipv6: %+v", a.Undeclared)
+	}
+}

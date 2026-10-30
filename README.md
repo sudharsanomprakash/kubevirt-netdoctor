@@ -260,8 +260,8 @@ and where that expectation came from, and a recommended next step. The full list
 | OVS | `OVS_PORT_MISSING`, `OVS_PORT_WRONG_BRIDGE`, `OVS_BRIDGE_NO_FLOWS` | host snapshot |
 | VLAN / MTU | `VLAN_MISMATCH`, `VLAN_NOT_ENFORCED`, `MTU_MISMATCH` | NAD config or expectations; host snapshot for host checks |
 | Bonds | `BOND_MEMBER_DETACHED`, `LACP_PARTNER_MISMATCH` | host snapshot; expectations for expected members/partner |
-| Routes | `ROUTE_MISSING`, `ROUTE_AMBIGUOUS`, `ROUTE_GATEWAY_OFFLINK`, `HOST_ROUTE_MISSING`, `HOST_ROUTE_REJECTED`, `HOST_ROUTE_EGRESS_DOWN` | `--destination`; host snapshot for node checks |
-| Coverage | `TOPOLOGY_INCOMPLETE`, `HOST_SNAPSHOT_NODE_MISMATCH`, `HOST_COLLECTOR_UNAVAILABLE`, `ACCESS_DENIED`, `API_UNAVAILABLE` | |
+| Routes | `ROUTE_MISSING`, `ROUTE_UNDETERMINED`, `ROUTE_AMBIGUOUS`, `ROUTE_GATEWAY_OFFLINK`, `HOST_ROUTE_MISSING`, `HOST_ROUTE_REJECTED`, `HOST_ROUTE_EGRESS_DOWN` | `--destination`; host snapshot for node checks |
+| Coverage | `TOPOLOGY_INCOMPLETE`, `HOST_SNAPSHOT_NODE_MISMATCH`, `HOST_SNAPSHOT_HOSTNAME_MISMATCH`, `HOST_COLLECTOR_UNAVAILABLE`, `ACCESS_DENIED`, `API_UNAVAILABLE` | |
 
 netdoctor never invents expected values. VLAN, MTU and bond checks compare against
 the NAD configuration or against [an expectations file](examples/expectations.yaml)
@@ -323,8 +323,13 @@ kubectl debug node/worker-2 -it --image=<an image with a shell> -- chroot /host 
 # then copy /host/tmp/worker-2.json out of the debug pod with kubectl cp
 ```
 
-`--node-name` must be the Kubernetes node name; snapshots whose node does not match
-the VMI's node are not correlated (`HOST_SNAPSHOT_NODE_MISMATCH`).
+Run the collector **on the node that hosts the VM** (see `NODENAME` in
+`kubectl get vmi`), not on the machine you run kubectl from. `--node-name` must be the
+Kubernetes node name. The collector refuses a `--node-name` whose first DNS label differs
+from the host's own name, unless you pass `--allow-node-name-mismatch` (for kubelets
+with `--hostname-override`); such snapshots are flagged with
+`HOST_SNAPSHOT_HOSTNAME_MISMATCH`. Snapshots whose node does not match the VMI's node are
+not correlated (`HOST_SNAPSHOT_NODE_MISMATCH`).
 
 ## Troubleshooting
 
@@ -334,6 +339,7 @@ the VMI's node are not correlated (`HOST_SNAPSHOT_NODE_MISMATCH`).
 | `not permitted to read VirtualMachine` / `ACCESS_DENIED` | Missing RBAC; apply [`examples/rbac.yaml`](examples/rbac.yaml) for the namespace. |
 | `the cluster does not serve virtualmachines.kubevirt.io` | KubeVirt is not installed or the context points at another cluster. |
 | `HOST_SNAPSHOT_NODE_MISMATCH` | The snapshot came from another node, or `--node-name` was not the Kubernetes node name. Re-collect on the node in `VMI status.nodeName`. |
+| `ROUTE_UNDETERMINED` | The VM's addressing on a secondary network is configured inside the guest (no NAD IPAM), so the path cannot be derived from configuration. Check `ip route get <destination>` inside the guest. |
 | `HOST_COLLECTOR_UNAVAILABLE` for `ovsdb` | The collector could not reach the OVS database, usually for lack of privileges. Re-run as root or with access to the OVS sockets. |
 | `TOPOLOGY_INCOMPLETE` | Some layers were not observable; the evidence lists which. Provide a host snapshot, fix permissions, or install the guest agent. |
 | No findings but traffic still fails | Nothing contradictory was found in the observed configuration; connectivity was not tested. Continue with data-plane tools on the node, for example `ovs-appctl ofproto/trace`, `tcpdump` on the uplink, and the switch-side port and LAG state. |

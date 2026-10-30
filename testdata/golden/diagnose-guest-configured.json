@@ -1,0 +1,173 @@
+{
+  "schemaVersion": "netdoctor/v1alpha1",
+  "kind": "DiagnosisReport",
+  "toolVersion": "dev",
+  "topology": {
+    "target": {
+      "kind": "VirtualMachine",
+      "namespace": "apps",
+      "name": "app-07"
+    },
+    "virtualMachine": {
+      "name": "app-07",
+      "lookup": "Found",
+      "runStrategy": "Always",
+      "printableStatus": "Running",
+      "ready": true
+    },
+    "virtualMachineInstance": {
+      "name": "app-07",
+      "lookup": "Found",
+      "uid": "1c6d1f0e-0000-4000-8000-000000000002",
+      "phase": "Running",
+      "nodeName": "worker-4",
+      "guestAgent": "Connected",
+      "conditions": [
+        {
+          "type": "AgentConnected",
+          "status": "True"
+        }
+      ],
+      "networkSpecSource": "VirtualMachineInstance"
+    },
+    "launcher": {
+      "lookup": "Found",
+      "selected": {
+        "name": "virt-launcher-app-07-q2m9z",
+        "uid": "1c6d1f0e-0000-4000-8000-000000000003",
+        "phase": "Running",
+        "nodeName": "worker-4",
+        "podIPs": [
+          "10.244.4.70"
+        ]
+      },
+      "candidates": [
+        {
+          "name": "virt-launcher-app-07-q2m9z",
+          "uid": "1c6d1f0e-0000-4000-8000-000000000003",
+          "phase": "Running",
+          "nodeName": "worker-4",
+          "podIPs": [
+            "10.244.4.70"
+          ]
+        }
+      ],
+      "selectionReason": "single active virt-launcher pod owned by the VMI",
+      "networkStatusPresent": true
+    },
+    "nodeName": "worker-4",
+    "networks": [
+      {
+        "name": "net-0",
+        "source": "multus",
+        "interface": {
+          "binding": "bridge",
+          "macAddress": "02:00:00:00:1e:07"
+        },
+        "guest": {
+          "name": "net-0",
+          "interfaceName": "eth0",
+          "mac": "02:00:00:00:1e:07",
+          "ips": [
+            "192.0.2.21",
+            "fe80::ff:fe00:1e07"
+          ],
+          "infoSource": "domain, guest-agent, multus-status",
+          "podInterfaceName": "pod5a1e2b3c4d6"
+        },
+        "podRequest": {
+          "interface": "pod5a1e2b3c4d6",
+          "mac": "02:00:00:00:1e:07"
+        },
+        "podAttachment": {
+          "networkName": "shared/ovs-vlan30",
+          "interface": "pod5a1e2b3c4d6",
+          "mac": "02:00:00:00:1e:07",
+          "matchedBy": "podInterfaceName"
+        },
+        "networkAttachmentDefinition": {
+          "ref": {
+            "namespace": "shared",
+            "name": "ovs-vlan30"
+          },
+          "lookup": "Found",
+          "config": {
+            "cniVersion": "0.4.0",
+            "name": "ovs-vlan30",
+            "isList": false,
+            "plugins": [
+              {
+                "type": "ovs",
+                "description": "Open vSwitch (OVS CNI)",
+                "role": "interface",
+                "bridge": "br-trunk",
+                "vlan": 30
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "unmatchedPodAttachments": [
+      {
+        "networkName": "k8s-pod-network",
+        "interface": "eth0",
+        "mac": "0a:58:0a:f4:04:46",
+        "ips": [
+          "10.244.4.70"
+        ],
+        "default": true
+      }
+    ]
+  },
+  "route": {
+    "destination": "192.0.2.51",
+    "candidates": null,
+    "undeclared": [
+      {
+        "network": "net-0",
+        "guestIPs": [
+          "192.0.2.21"
+        ],
+        "reason": "NAD declares no IPAM; addressing is configured in the guest"
+      }
+    ],
+    "notes": [
+      "configuration analysis only: no packets were sent",
+      "the guest's own routing table is not observable through the Kubernetes API",
+      "NAD IPAM subnets and routes configure the pod interface; the guest uses them only if they are delivered to it (binding-dependent) or configured in the guest"
+    ]
+  },
+  "findings": [
+    {
+      "id": "ROUTE_UNDETERMINED",
+      "severity": "Info",
+      "category": "Unavailable",
+      "resource": "VirtualMachineInstance apps/app-07",
+      "summary": "The path to 192.0.2.51 cannot be determined from configuration; addressing is configured inside the guest",
+      "evidence": [
+        "network \"net-0\": guest reports 192.0.2.21; NAD declares no IPAM; addressing is configured in the guest",
+        "KubeVirt reports guest addresses without prefix lengths, so on-link reachability cannot be evaluated"
+      ],
+      "nextAction": "Check inside the guest: ip route get 192.0.2.51 (or use the guest agent), and the switch/VLAN the destination is on."
+    },
+    {
+      "id": "TOPOLOGY_INCOMPLETE",
+      "severity": "Info",
+      "category": "Unavailable",
+      "resource": "VirtualMachineInstance apps/app-07",
+      "summary": "1 part(s) of the VM's network path could not be observed",
+      "evidence": [
+        "no host snapshot: host bridges, OVS ports, uplinks and bonds are not observed (see kubectl netdoctor host collect)"
+      ],
+      "nextAction": "See kubectl netdoctor topology for the observed and inferred relationships."
+    }
+  ],
+  "summary": {
+    "errors": 0,
+    "warnings": 0,
+    "info": 2,
+    "connectivity": "NotTested",
+    "scope": "Read-only Kubernetes API inspection. Guest, node, OVS/bridge, host NIC and switch state were not observed."
+  }
+}

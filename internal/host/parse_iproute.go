@@ -136,13 +136,13 @@ func ParseAddresses(data []byte) (map[string][]string, error) {
 // without a "table" attribute belong to the main table.
 func ParseRoutes(data []byte, ipv6 bool) ([]Route, error) {
 	var entries []struct {
-		Type     string `json:"type"`
-		Dst      string `json:"dst"`
-		Gateway  string `json:"gateway"`
-		Dev      string `json:"dev"`
-		Protocol string `json:"protocol"`
-		Metric   int    `json:"metric"`
-		Table    string `json:"table"`
+		Type     flexString `json:"type"`
+		Dst      string     `json:"dst"`
+		Gateway  string     `json:"gateway"`
+		Dev      string     `json:"dev"`
+		Protocol flexString `json:"protocol"`
+		Metric   int        `json:"metric"`
+		Table    flexString `json:"table"`
 	}
 	if err := json.Unmarshal(data, &entries); err != nil {
 		return nil, fmt.Errorf("parsing ip route JSON: %w", err)
@@ -153,15 +153,15 @@ func ParseRoutes(data []byte, ipv6 bool) ([]Route, error) {
 		if err != nil {
 			continue // unparseable entries (e.g. multicast types) are not needed for lookup
 		}
-		table := e.Table
-		if table == "" {
+		table := string(e.Table)
+		if table == "" || table == "254" {
 			table = "main"
 		}
-		typ := e.Type
+		typ := string(e.Type)
 		if typ == "unicast" {
 			typ = ""
 		}
-		out = append(out, Route{Table: table, Dst: dst, Gateway: e.Gateway, Dev: e.Dev, Protocol: e.Protocol, Metric: e.Metric, Type: typ})
+		out = append(out, Route{Table: table, Dst: dst, Gateway: e.Gateway, Dev: e.Dev, Protocol: string(e.Protocol), Metric: e.Metric, Type: typ})
 	}
 	return out, nil
 }
@@ -255,4 +255,22 @@ func ParseNamespaces(data []byte) ([]string, error) {
 		out = append(out, e.Name)
 	}
 	return out, nil
+}
+
+// flexString accepts a JSON string or number. iproute2 prints well-known
+// values by name but may print unnamed protocol or table IDs as numbers.
+type flexString string
+
+func (f *flexString) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := json.Unmarshal(data, &s); err == nil {
+		*f = flexString(s)
+		return nil
+	}
+	var n json.Number
+	if err := json.Unmarshal(data, &n); err != nil {
+		return fmt.Errorf("expected a string or number, got %s", data)
+	}
+	*f = flexString(n.String())
+	return nil
 }
