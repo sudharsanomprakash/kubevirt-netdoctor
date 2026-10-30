@@ -40,8 +40,11 @@ type Topology struct {
 	// GuestOnlyInterfaces are interfaces the guest agent reports that are
 	// not backed by a VMI network (for example a container bridge inside the
 	// guest). They are informational.
-	GuestOnlyInterfaces []GuestInterface   `json:"guestOnlyInterfaces,omitempty"`
-	AccessIssues        []kube.AccessIssue `json:"accessIssues,omitempty"`
+	GuestOnlyInterfaces []GuestInterface `json:"guestOnlyInterfaces,omitempty"`
+	// UnmatchedPodAttachments are Multus network-status entries on the
+	// launcher pod that no VMI network accounts for.
+	UnmatchedPodAttachments []PodAttachment    `json:"unmatchedPodAttachments,omitempty"`
+	AccessIssues            []kube.AccessIssue `json:"accessIssues,omitempty"`
 }
 
 // VMInfo summarizes a VirtualMachine.
@@ -162,7 +165,25 @@ type PodAttachment struct {
 	MAC         string   `json:"mac,omitempty"`
 	IPs         []string `json:"ips,omitempty"`
 	Default     bool     `json:"default,omitempty"`
+	// MatchedBy records how the entry was attributed to the VMI network.
+	MatchedBy string `json:"matchedBy,omitempty"`
 }
+
+// Pod attachment matching methods, from strongest to weakest evidence.
+const (
+	// MatchPodInterfaceName: VMI status podInterfaceName equals the
+	// network-status interface.
+	MatchPodInterfaceName = "podInterfaceName"
+	// MatchRequestInterface: the Multus request for this NAD named the
+	// interface, and network-status reports it.
+	MatchRequestInterface = "requestInterface"
+	// MatchDefaultFlag: the entry is flagged default and the VMI network is
+	// the pod (or Multus default) network.
+	MatchDefaultFlag = "defaultFlag"
+	// MatchReferenceOrder: matched by NAD reference in order of occurrence
+	// because no interface name was available. This is an inference.
+	MatchReferenceOrder = "referenceOrder"
+)
 
 // NADInfo is the NetworkAttachmentDefinition referenced by a Multus network.
 type NADInfo struct {

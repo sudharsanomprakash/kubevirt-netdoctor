@@ -1,0 +1,3 @@
+[{"ifname":"bond0.100","vlans":[{"vlan":1,"flags":["PVID","Egress Untagged"]},{"vlan":100},{"vlan":200,"vlanEnd":210}]},
+ {"ifname":"br1","vlans":[{"vlan":1,"flags":["PVID","Egress Untagged"]}]},
+ {"ifname":"veth5c6f2b9e","vlans":[{"vlan":100,"flags":["PVID","Egress Untagged"]}]}]

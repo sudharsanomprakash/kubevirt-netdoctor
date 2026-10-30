@@ -1,0 +1,5 @@
+{"data":[[["uuid","p1"],"br-data",["uuid","i1"],["set",[]],["set",[]],["set",[]],["set",[]],["set",[]],["map",[]]],
+         [["uuid","p2"],"bond1",["set",[["uuid","i2"],["uuid","i3"]]],["set",[]],["set",[200,300]],"trunk","balance-tcp","active",["map",[]]],
+         [["uuid","p3"],"veth8a1b2c3d",["uuid","i4"],200,["set",[]],"access",["set",[]],["set",[]],["map",[["contIface","eth0"],["contNetns","/var/run/netns/cni-0000"],["contPodUid","0b6d1f0e-0000-4000-8000-000000000003"],["owner","ovs-cni.network.kubevirt.io"]]]],
+         [["uuid","p4"],"br-secure",["uuid","i5"],["set",[]],["set",[]],["set",[]],["set",[]],["set",[]],["map",[]]]],
+ "headings":["_uuid","name","interfaces","tag","trunks","vlan_mode","bond_mode","lacp","external_ids"]}

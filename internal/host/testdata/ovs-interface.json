@@ -1,0 +1,6 @@
+{"data":[[["uuid","i1"],"br-data","internal",65534,"up","up",1500,"02:00:00:00:05:01",["set",[]],["map",[]]],
+         [["uuid","i2"],"ens1f0","",1,"up","up",9000,"02:00:00:00:05:02",["set",[]],["map",[]]],
+         [["uuid","i3"],"ens1f1","",2,"up","down",9000,"02:00:00:00:05:03",["set",[]],["map",[]]],
+         [["uuid","i4"],"veth8a1b2c3d","",3,"up","up",1500,"02:00:00:00:05:04",["set",[]],["map",[]]],
+         [["uuid","i5"],"br-secure","internal",65534,"up","up",1500,"02:00:00:00:05:05","could not open network device",["map",[]]]],
+ "headings":["_uuid","name","type","ofport","admin_state","link_state","mtu","mac_in_use","error","external_ids"]}

@@ -84,7 +84,8 @@
           "ips": [
             "10.244.1.15"
           ],
-          "default": true
+          "default": true,
+          "matchedBy": "defaultFlag"
         }
       },
       {
@@ -111,7 +112,8 @@
         "podAttachment": {
           "networkName": "demo/br-vlan100",
           "interface": "pod5c6f2b9e0d1",
-          "mac": "02:00:00:00:64:01"
+          "mac": "02:00:00:00:64:01",
+          "matchedBy": "podInterfaceName"
         },
         "networkAttachmentDefinition": {
           "ref": {

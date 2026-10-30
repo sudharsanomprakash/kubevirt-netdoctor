@@ -1,0 +1,4 @@
+[{"dst":"default","gateway":"192.0.2.1","dev":"br1","protocol":"static","metric":100,"flags":[]},
+ {"dst":"192.0.2.0/24","dev":"br1","protocol":"kernel","scope":"link","prefsrc":"192.0.2.11","flags":[]},
+ {"dst":"198.51.100.7","gateway":"192.0.2.254","dev":"br1","flags":[]},
+ {"type":"local","dst":"192.0.2.11","table":"local","dev":"br1","protocol":"kernel","scope":"host","prefsrc":"192.0.2.11","flags":[]}]

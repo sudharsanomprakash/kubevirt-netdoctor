@@ -1,0 +1,28 @@
+---- bond1 ----
+  status: active negotiated
+  sys_id: 02:00:00:00:05:02
+  sys_priority: 65534
+  aggregation key: 1
+  lacp_time: slow
+
+member: ens1f0: current attached
+  port_id: 1
+  port_priority: 65535
+  may_enable: true
+
+  actor sys_id: 02:00:00:00:05:02
+  actor port_id: 1
+  actor state: activity aggregation synchronized collecting distributing
+
+  partner sys_id: 02:aa:00:00:00:01
+  partner sys_priority: 32768
+  partner port_id: 5
+  partner state: activity aggregation synchronized collecting distributing
+
+slave: ens1f1: defaulted detached
+  port_id: 2
+  may_enable: false
+
+  actor sys_id: 02:00:00:00:05:02
+  partner sys_id: 00:00:00:00:00:00
+  partner port_id: 0

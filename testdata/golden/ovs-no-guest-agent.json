@@ -63,7 +63,8 @@
           "networkName": "demo/ovs-vlan200",
           "interface": "eth0",
           "mac": "02:00:00:00:c8:02",
-          "default": true
+          "default": true,
+          "matchedBy": "defaultFlag"
         },
         "networkAttachmentDefinition": {
           "ref": {

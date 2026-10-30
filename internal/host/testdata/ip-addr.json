@@ -1,0 +1,2 @@
+[{"ifindex":1,"ifname":"lo","addr_info":[{"family":"inet","local":"127.0.0.1","prefixlen":8}]},
+ {"ifindex":6,"ifname":"br1","addr_info":[{"family":"inet","local":"192.0.2.11","prefixlen":24},{"family":"inet6","local":"2001:db8::11","prefixlen":64}]}]
