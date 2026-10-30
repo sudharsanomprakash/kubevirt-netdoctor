@@ -1,0 +1,37 @@
+{
+  "schemaVersion": "netdoctor.host/v1alpha1",
+  "nodeName": "worker-1",
+  "hostname": "worker-1",
+  "collectedAt": "2026-01-01T00:00:00Z",
+  "sources": [
+    {"name": "links", "status": "OK"},
+    {"name": "addresses", "status": "OK"},
+    {"name": "routes", "status": "OK"},
+    {"name": "bridge-vlans", "status": "OK"},
+    {"name": "namespaces", "status": "OK"},
+    {"name": "bonding", "status": "OK"},
+    {"name": "ovsdb", "status": "NotInstalled", "command": ["ovs-vsctl"], "message": "ovs-vsctl is not installed"}
+  ],
+  "interfaces": [
+    {"name": "eth0", "index": 2, "mtu": 1500, "mac": "02:00:00:01:00:01", "operState": "UP", "adminUp": true, "addresses": ["192.0.2.11/24"]},
+    {"name": "eno1", "index": 3, "mtu": 9000, "mac": "02:00:00:01:01:01", "operState": "UP", "adminUp": true, "master": "bond0",
+     "bondMember": {"miiStatus": "UP", "state": "ACTIVE", "aggregatorId": 1, "partnerMac": "02:aa:00:00:00:01"}},
+    {"name": "eno2", "index": 4, "mtu": 9000, "mac": "02:00:00:01:01:02", "operState": "UP", "adminUp": true, "master": "bond0",
+     "bondMember": {"miiStatus": "UP", "state": "ACTIVE", "aggregatorId": 1, "partnerMac": "02:aa:00:00:00:01"}},
+    {"name": "bond0", "index": 5, "kind": "bond", "mtu": 9000, "mac": "02:00:00:01:01:01", "operState": "UP", "adminUp": true, "master": "br1",
+     "bond": {"mode": "802.3ad", "activeAggregator": 1, "partnerMac": "02:aa:00:00:00:01"}},
+    {"name": "br1", "index": 6, "kind": "bridge", "mtu": 9000, "mac": "02:00:00:01:02:01", "operState": "UP", "adminUp": true,
+     "bridge": {"vlanFiltering": true}},
+    {"name": "veth5c6f2b9e", "index": 7, "kind": "veth", "mtu": 9000, "mac": "02:00:00:01:03:01", "operState": "UP", "adminUp": true, "master": "br1", "peerNetnsId": 0}
+  ],
+  "routes": [
+    {"table": "main", "dst": "0.0.0.0/0", "gateway": "192.0.2.1", "dev": "eth0", "protocol": "static", "metric": 100},
+    {"table": "main", "dst": "192.0.2.0/24", "dev": "eth0", "protocol": "kernel"}
+  ],
+  "bridgeVLANs": [
+    {"port": "bond0", "vlans": [{"min": 1, "max": 1, "pvid": true, "untagged": true}, {"min": 100, "max": 100}]},
+    {"port": "br1", "vlans": [{"min": 1, "max": 1, "pvid": true, "untagged": true}]},
+    {"port": "veth5c6f2b9e", "vlans": [{"min": 100, "max": 100, "pvid": true, "untagged": true}]}
+  ],
+  "namespaces": ["cni-0000"]
+}

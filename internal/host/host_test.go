@@ -345,7 +345,7 @@ func TestCollectTimeoutAndCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	if _, err := Collect(ctx, &fakeRunner{blockUntilDone: true}, fstest.MapFS{}, CollectOptions{Now: fixedNow}); !errors.Is(err, context.Canceled) {
-		t.Errorf("cancelled context: err = %v", err)
+		t.Errorf("canceled context: err = %v", err)
 	}
 }
 

@@ -1,0 +1,29 @@
+Topology:  VirtualMachineInstance demo/edge-05
+VMI:       phase=Running  node=worker-1
+Launcher:  virt-launcher-edge-05-l4m8d
+
+network default {binding=masquerade, source=pod}
+  +- realized-as -> GuestInterface demo/edge-05/default {infoSource=domain, guest-agent, interfaceName=enp1s0, ips=10.244.2.21, mac=02:00:00:00:00:0b}  [Observed] VMI status.interfaces
+  |  +- bound-to -> PodInterface demo/virt-launcher-edge-05-l4m8d/eth0 {ips=10.244.2.21, mac=0a:58:0a:f4:02:15, network=k8s-pod-network}  [Inferred] masquerade binding: guest traffic is NATed to the pod interface address
+  |  |  +- member-of -> ClusterNetwork k8s-pod-network  [Declared] pod network (primary CNI)
+  +- attached-via -> PodInterface demo/virt-launcher-edge-05-l4m8d/eth0 {ips=10.244.2.21, mac=0a:58:0a:f4:02:15, network=k8s-pod-network}  [Observed] matched by defaultFlag (shown above)
+
+network frontend {binding=bridge, source=multus}
+  +- realized-as -> GuestInterface demo/edge-05/frontend {infoSource=domain, guest-agent, multus-status, interfaceName=enp2s0, ips=198.51.100.5, mac=02:00:00:00:0f:99}  [Observed] VMI status.interfaces
+  |  +- bound-to -> PodInterface demo/virt-launcher-edge-05-l4m8d/pod1f6e3b8a2c4 {mac=02:00:00:00:0f:01, network=demo/frontend-net}  [Inferred] bridge binding: the pod interface is bridged to the guest at layer 2
+  |  |  +- created-from -> NetworkAttachmentDefinition demo/frontend-net {cni=cnv-bridge(br=br-front), lookup=Found}  [Observed] network-status entry names the NAD
+  +- attached-via -> PodInterface demo/virt-launcher-edge-05-l4m8d/pod1f6e3b8a2c4 {mac=02:00:00:00:0f:01, network=demo/frontend-net}  [Observed] matched by requestInterface (shown above)
+  +- references -> NetworkAttachmentDefinition demo/frontend-net {cni=cnv-bridge(br=br-front), lookup=Found}  [Declared] spec.networks[].multus.networkName (shown above)
+
+network mgmt {binding=bridge, source=multus}
+  +- realized-as -> GuestInterface demo/edge-05/mgmt {infoSource=domain, guest-agent, interfaceName=enp3s0, mac=02:00:00:00:0e:01}  [Observed] VMI status.interfaces
+  +- references -> NetworkAttachmentDefinition demo/mgmt-net {cni=macvlan(master=bond0.50), lookup=Found}  [Declared] spec.networks[].multus.networkName
+
+ABSENT (1): sources were readable but did not contain these
+  - network "mgmt": no Multus network-status entry was attributed to it
+
+GAPS (1): not observable
+  - no host snapshot: host bridges, OVS ports, uplinks and bonds are not observed (see kubectl netdoctor host collect)
+
+Provenance: Observed = reported by the Kubernetes API or host snapshot; Declared = stated by configuration; Inferred = derived from documented behavior or matching heuristics.
+Connectivity: NOT TESTED. Read-only Kubernetes API inspection. Guest, node, OVS/bridge, host NIC and switch state were not observed.

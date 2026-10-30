@@ -15,15 +15,22 @@ type ClientFactory func(genericclioptions.RESTClientGetter) (*kube.Clients, erro
 
 // NewRootCommand builds the kubectl-netdoctor command tree.
 func NewRootCommand(streams genericiooptions.IOStreams, newClients ClientFactory) *cobra.Command {
+	return newRootCommand(streams, newClients, DefaultHostEnv())
+}
+
+func newRootCommand(streams genericiooptions.IOStreams, newClients ClientFactory, hostEnv HostEnv) *cobra.Command {
 	configFlags := genericclioptions.NewConfigFlags(true)
 
 	root := &cobra.Command{
 		Use:   "kubectl-netdoctor",
 		Short: "Diagnose KubeVirt virtual machine networking",
-		Long: `kubectl netdoctor inspects how a KubeVirt virtual machine is wired into the
-cluster network: its VMI interfaces, virt-launcher pod, Multus attachments and
-NetworkAttachmentDefinitions. It reads Kubernetes API state only and never
-modifies the cluster. Connectivity is not tested.`,
+		Long: `kubectl netdoctor explains how a KubeVirt virtual machine is wired into the
+network: its VMI interfaces, virt-launcher pod, Multus attachments,
+NetworkAttachmentDefinitions and, from an explicitly collected host snapshot,
+the node's bridges, OVS ports, VLANs, bonds and routes.
+
+It is read-only, never modifies the cluster or the node, and never sends
+traffic: connectivity is not tested.`,
 		Annotations: map[string]string{
 			cobra.CommandDisplayNameAnnotation: "kubectl netdoctor",
 		},
@@ -37,6 +44,9 @@ modifies the cluster. Connectivity is not tested.`,
 
 	root.AddCommand(
 		newInspectCommand(streams, configFlags, newClients),
+		newTopologyCommand(streams, configFlags, newClients),
+		newDiagnoseCommand(streams, configFlags, newClients),
+		newHostCommand(streams, hostEnv),
 		newVersionCommand(streams),
 	)
 	return root

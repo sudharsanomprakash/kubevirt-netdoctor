@@ -1,0 +1,53 @@
+{
+  "schemaVersion": "netdoctor.host/v1alpha1",
+  "nodeName": "worker-2",
+  "hostname": "worker-2",
+  "collectedAt": "2026-01-01T00:00:00Z",
+  "sources": [
+    {"name": "links", "status": "OK"},
+    {"name": "addresses", "status": "OK"},
+    {"name": "routes", "status": "OK"},
+    {"name": "bridge-vlans", "status": "OK"},
+    {"name": "namespaces", "status": "OK"},
+    {"name": "bonding", "status": "Skipped", "message": "no Linux bonds present"},
+    {"name": "ovsdb", "status": "OK"},
+    {"name": "ovs-bonds", "status": "OK", "command": ["ovs-appctl", "bond/show"]},
+    {"name": "ovs-lacp", "status": "OK", "command": ["ovs-appctl", "lacp/show"]},
+    {"name": "ovs-flows", "status": "OK", "command": ["ovs-ofctl", "dump-flows", "<bridge>"]}
+  ],
+  "interfaces": [
+    {"name": "eth0", "index": 2, "mtu": 1500, "mac": "02:00:00:02:00:01", "operState": "UP", "adminUp": true, "addresses": ["192.0.2.12/24"]},
+    {"name": "ens1f0", "index": 3, "mtu": 9000, "mac": "02:00:00:02:01:01", "operState": "UP", "adminUp": true, "master": "ovs-system"},
+    {"name": "ens1f1", "index": 4, "mtu": 9000, "mac": "02:00:00:02:01:02", "operState": "UP", "adminUp": true, "master": "ovs-system"},
+    {"name": "ovs-system", "index": 5, "kind": "openvswitch", "mtu": 1500, "operState": "DOWN", "adminUp": false},
+    {"name": "br-data", "index": 6, "kind": "openvswitch", "mtu": 9000, "operState": "UNKNOWN", "adminUp": true},
+    {"name": "veth3e9a1c7b", "index": 7, "kind": "veth", "mtu": 9000, "operState": "UP", "adminUp": true, "master": "ovs-system", "peerNetnsId": 0}
+  ],
+  "routes": [
+    {"table": "main", "dst": "0.0.0.0/0", "gateway": "192.0.2.1", "dev": "eth0", "protocol": "static", "metric": 100},
+    {"table": "main", "dst": "192.0.2.0/24", "dev": "eth0", "protocol": "kernel"}
+  ],
+  "ovs": {
+    "bridges": [
+      {"name": "br-data", "ports": ["bond1", "br-data", "veth3e9a1c7b"], "flows": {"count": 1, "hasNormal": true}}
+    ],
+    "ports": [
+      {"name": "bond1", "bridge": "br-data", "interfaces": ["ens1f0", "ens1f1"], "trunks": [200, 300], "vlanMode": "trunk", "bondMode": "balance-tcp", "lacp": "active"},
+      {"name": "br-data", "bridge": "br-data", "interfaces": ["br-data"]},
+      {"name": "veth3e9a1c7b", "bridge": "br-data", "interfaces": ["veth3e9a1c7b"], "tag": 200, "vlanMode": "access",
+       "externalIds": {"contIface": "pod3e9a1c7b2d0", "contNetns": "/var/run/netns/cni-1111", "contPodUid": "1b6d1f0e-0000-4000-8000-000000000003", "owner": "ovs-cni.network.kubevirt.io"}}
+    ],
+    "interfaces": [
+      {"name": "br-data", "type": "internal", "ofport": 65534, "adminState": "up", "linkState": "up", "mtu": 9000},
+      {"name": "ens1f0", "ofport": 1, "adminState": "up", "linkState": "up", "mtu": 9000},
+      {"name": "ens1f1", "ofport": 2, "adminState": "up", "linkState": "up", "mtu": 9000},
+      {"name": "veth3e9a1c7b", "ofport": 3, "adminState": "up", "linkState": "up", "mtu": 9000}
+    ],
+    "bonds": [
+      {"name": "bond1", "mode": "balance-tcp", "lacpStatus": "negotiated", "members": [
+        {"name": "ens1f0", "enabled": true, "lacpState": "current attached", "partnerSysId": "02:aa:00:00:00:01"},
+        {"name": "ens1f1", "enabled": true, "lacpState": "current attached", "partnerSysId": "02:aa:00:00:00:01"}
+      ]}
+    ]
+  }
+}

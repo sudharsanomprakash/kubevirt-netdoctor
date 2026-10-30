@@ -1,0 +1,194 @@
+{
+  "schemaVersion": "netdoctor/v1alpha1",
+  "kind": "DiagnosisReport",
+  "toolVersion": "dev",
+  "topology": {
+    "target": {
+      "kind": "VirtualMachine",
+      "namespace": "demo",
+      "name": "web-04"
+    },
+    "virtualMachine": {
+      "name": "web-04",
+      "lookup": "Found",
+      "runStrategy": "Always",
+      "printableStatus": "Running",
+      "ready": true
+    },
+    "virtualMachineInstance": {
+      "name": "web-04",
+      "lookup": "Found",
+      "uid": "1a6d1f0e-0000-4000-8000-000000000002",
+      "phase": "Running",
+      "nodeName": "worker-3",
+      "guestAgent": "Connected",
+      "conditions": [
+        {
+          "type": "AgentConnected",
+          "status": "True"
+        }
+      ],
+      "networkSpecSource": "VirtualMachineInstance"
+    },
+    "launcher": {
+      "lookup": "Found",
+      "selected": {
+        "name": "virt-launcher-web-04-7hq2x",
+        "uid": "1a6d1f0e-0000-4000-8000-000000000003",
+        "phase": "Running",
+        "nodeName": "worker-3",
+        "podIPs": [
+          "10.244.3.40"
+        ]
+      },
+      "candidates": [
+        {
+          "name": "virt-launcher-web-04-7hq2x",
+          "uid": "1a6d1f0e-0000-4000-8000-000000000003",
+          "phase": "Running",
+          "nodeName": "worker-3",
+          "podIPs": [
+            "10.244.3.40"
+          ]
+        }
+      ],
+      "selectionReason": "single active virt-launcher pod owned by the VMI",
+      "networkStatusPresent": true
+    },
+    "nodeName": "worker-3",
+    "networks": [
+      {
+        "name": "default",
+        "source": "pod",
+        "interface": {
+          "binding": "masquerade"
+        },
+        "guest": {
+          "name": "default",
+          "interfaceName": "enp1s0",
+          "mac": "02:00:00:00:00:0d",
+          "ips": [
+            "10.244.3.40"
+          ],
+          "infoSource": "domain, guest-agent",
+          "podInterfaceName": "eth0"
+        },
+        "podAttachment": {
+          "networkName": "k8s-pod-network",
+          "interface": "eth0",
+          "mac": "0a:58:0a:f4:03:28",
+          "ips": [
+            "10.244.3.40"
+          ],
+          "default": true,
+          "matchedBy": "defaultFlag"
+        }
+      }
+    ]
+  },
+  "hostSnapshot": {
+    "nodeName": "worker-3",
+    "collectedAt": "2026-01-01T00:00:00Z",
+    "sources": [
+      {
+        "name": "links",
+        "status": "OK"
+      },
+      {
+        "name": "addresses",
+        "status": "OK"
+      },
+      {
+        "name": "routes",
+        "status": "OK"
+      },
+      {
+        "name": "bridge-vlans",
+        "status": "OK"
+      },
+      {
+        "name": "namespaces",
+        "status": "OK"
+      },
+      {
+        "name": "bonding",
+        "status": "Skipped",
+        "message": "no Linux bonds present"
+      },
+      {
+        "name": "ovsdb",
+        "status": "NotInstalled",
+        "command": [
+          "ovs-vsctl"
+        ],
+        "message": "ovs-vsctl is not installed"
+      }
+    ]
+  },
+  "host": {
+    "snapshotNode": "worker-3",
+    "vmiNode": "worker-3",
+    "nodeMatch": true,
+    "paths": [
+      {
+        "network": "default",
+        "kind": "PodNetwork",
+        "deviceState": "NotApplicable",
+        "podPortState": "NotApplicable",
+        "notes": [
+          "the cluster network data path is CNI-specific; netdoctor checks host routes for it with diagnose --destination"
+        ]
+      }
+    ]
+  },
+  "route": {
+    "destination": "203.0.113.50",
+    "candidates": [
+      {
+        "network": "default",
+        "kind": "Default",
+        "prefix": "0.0.0.0/0",
+        "provenance": "Inferred",
+        "reason": "KubeVirt provides the guest default route on the pod network for masquerade binding"
+      }
+    ],
+    "selected": {
+      "network": "default",
+      "kind": "Default",
+      "prefix": "0.0.0.0/0",
+      "provenance": "Inferred",
+      "reason": "KubeVirt provides the guest default route on the pod network for masquerade binding"
+    },
+    "host": {
+      "applicable": true,
+      "reason": "pod network traffic is routed by the node; the exact path is CNI-specific (main table only, policy routing not evaluated)",
+      "result": "NoRoute"
+    },
+    "notes": [
+      "configuration analysis only: no packets were sent",
+      "the guest's own routing table is not observable through the Kubernetes API",
+      "NAD IPAM subnets and routes configure the pod interface; the guest uses them only if they are delivered to it (binding-dependent) or configured in the guest"
+    ]
+  },
+  "findings": [
+    {
+      "id": "HOST_ROUTE_MISSING",
+      "severity": "Error",
+      "category": "Confirmed",
+      "resource": "Node worker-3 (host snapshot)",
+      "summary": "The node's main routing table has no route to 203.0.113.50",
+      "evidence": [
+        "pod network traffic is routed by the node; the exact path is CNI-specific (main table only, policy routing not evaluated)"
+      ],
+      "expected": "a route (or default route) covering the destination",
+      "nextAction": "Check the node's default route and the CNI's egress path (policy routing tables are not evaluated)."
+    }
+  ],
+  "summary": {
+    "errors": 1,
+    "warnings": 0,
+    "info": 0,
+    "connectivity": "NotTested",
+    "scope": "Read-only Kubernetes API inspection plus a host snapshot of node worker-3 collected at 2026-01-01T00:00:00Z. Host state may have changed since; configuration does not prove forwarding. Guest and switch state were not observed."
+  }
+}

@@ -1,0 +1,76 @@
+# Running VM attached only to the cluster pod network (masquerade binding).
+# Synthetic data: names, UIDs, MACs and addresses are illustrative only.
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: web-04
+  namespace: demo
+  uid: 1a6d1f0e-0000-4000-8000-000000000001
+spec:
+  runStrategy: Always
+status:
+  printableStatus: Running
+  ready: true
+---
+apiVersion: kubevirt.io/v1
+kind: VirtualMachineInstance
+metadata:
+  name: web-04
+  namespace: demo
+  uid: 1a6d1f0e-0000-4000-8000-000000000002
+  ownerReferences:
+    - apiVersion: kubevirt.io/v1
+      kind: VirtualMachine
+      name: web-04
+      uid: 1a6d1f0e-0000-4000-8000-000000000001
+      controller: true
+spec:
+  domain:
+    devices:
+      interfaces:
+        - name: default
+          masquerade: {}
+  networks:
+    - name: default
+      pod: {}
+status:
+  phase: Running
+  nodeName: worker-3
+  conditions:
+    - type: AgentConnected
+      status: "True"
+  interfaces:
+    - name: default
+      interfaceName: enp1s0
+      ipAddress: 10.244.3.40
+      mac: "02:00:00:00:00:0d"
+      infoSource: domain, guest-agent
+      podInterfaceName: eth0
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: virt-launcher-web-04-7hq2x
+  namespace: demo
+  uid: 1a6d1f0e-0000-4000-8000-000000000003
+  creationTimestamp: "2026-01-01T00:00:00Z"
+  labels:
+    kubevirt.io: virt-launcher
+    kubevirt.io/created-by: 1a6d1f0e-0000-4000-8000-000000000002
+  annotations:
+    k8s.v1.cni.cncf.io/network-status: '[{"name":"k8s-pod-network","interface":"eth0","ips":["10.244.3.40"],"mac":"0a:58:0a:f4:03:28","default":true,"dns":{}}]'
+  ownerReferences:
+    - apiVersion: kubevirt.io/v1
+      kind: VirtualMachineInstance
+      name: web-04
+      uid: 1a6d1f0e-0000-4000-8000-000000000002
+      controller: true
+spec:
+  nodeName: worker-3
+  containers:
+    - name: compute
+      image: example.invalid/virt-launcher:v1
+status:
+  phase: Running
+  podIPs:
+    - ip: 10.244.3.40

@@ -1,0 +1,632 @@
+{
+  "schemaVersion": "netdoctor/v1alpha1",
+  "kind": "TopologyReport",
+  "toolVersion": "dev",
+  "topology": {
+    "target": {
+      "kind": "VirtualMachine",
+      "namespace": "demo",
+      "name": "db-03"
+    },
+    "virtualMachine": {
+      "name": "db-03",
+      "lookup": "Found",
+      "runStrategy": "Always",
+      "printableStatus": "Running",
+      "ready": true
+    },
+    "virtualMachineInstance": {
+      "name": "db-03",
+      "lookup": "Found",
+      "uid": "1b6d1f0e-0000-4000-8000-000000000002",
+      "phase": "Running",
+      "nodeName": "worker-2",
+      "guestAgent": "Connected",
+      "conditions": [
+        {
+          "type": "AgentConnected",
+          "status": "True"
+        }
+      ],
+      "networkSpecSource": "VirtualMachineInstance"
+    },
+    "launcher": {
+      "lookup": "Found",
+      "selected": {
+        "name": "virt-launcher-db-03-p8w4k",
+        "uid": "1b6d1f0e-0000-4000-8000-000000000003",
+        "phase": "Running",
+        "nodeName": "worker-2",
+        "podIPs": [
+          "10.244.2.33"
+        ]
+      },
+      "candidates": [
+        {
+          "name": "virt-launcher-db-03-p8w4k",
+          "uid": "1b6d1f0e-0000-4000-8000-000000000003",
+          "phase": "Running",
+          "nodeName": "worker-2",
+          "podIPs": [
+            "10.244.2.33"
+          ]
+        }
+      ],
+      "selectionReason": "single active virt-launcher pod owned by the VMI",
+      "networkStatusPresent": true
+    },
+    "nodeName": "worker-2",
+    "networks": [
+      {
+        "name": "default",
+        "source": "pod",
+        "interface": {
+          "binding": "masquerade"
+        },
+        "guest": {
+          "name": "default",
+          "interfaceName": "enp1s0",
+          "mac": "02:00:00:00:00:0e",
+          "ips": [
+            "10.244.2.33"
+          ],
+          "infoSource": "domain, guest-agent",
+          "podInterfaceName": "eth0"
+        },
+        "podAttachment": {
+          "networkName": "k8s-pod-network",
+          "interface": "eth0",
+          "mac": "0a:58:0a:f4:02:21",
+          "ips": [
+            "10.244.2.33"
+          ],
+          "default": true,
+          "matchedBy": "defaultFlag"
+        }
+      },
+      {
+        "name": "data",
+        "source": "multus",
+        "interface": {
+          "binding": "bridge",
+          "macAddress": "02:00:00:00:c8:03"
+        },
+        "guest": {
+          "name": "data",
+          "interfaceName": "enp2s0",
+          "mac": "02:00:00:00:c8:03",
+          "ips": [
+            "198.51.100.33"
+          ],
+          "infoSource": "domain, guest-agent, multus-status",
+          "podInterfaceName": "pod3e9a1c7b2d0"
+        },
+        "podRequest": {
+          "interface": "pod3e9a1c7b2d0",
+          "mac": "02:00:00:00:c8:03"
+        },
+        "podAttachment": {
+          "networkName": "demo/ovs-vlan200",
+          "interface": "pod3e9a1c7b2d0",
+          "mac": "02:00:00:00:c8:03",
+          "matchedBy": "podInterfaceName"
+        },
+        "networkAttachmentDefinition": {
+          "ref": {
+            "namespace": "demo",
+            "name": "ovs-vlan200"
+          },
+          "lookup": "Found",
+          "config": {
+            "cniVersion": "0.4.0",
+            "name": "ovs-vlan200",
+            "isList": false,
+            "plugins": [
+              {
+                "type": "ovs",
+                "description": "Open vSwitch (OVS CNI)",
+                "role": "interface",
+                "bridge": "br-data",
+                "vlan": 200,
+                "mtu": 9000,
+                "ipam": "whereabouts",
+                "ipamConfig": {
+                  "type": "whereabouts",
+                  "subnets": [
+                    "198.51.100.0/24"
+                  ],
+                  "gateways": [
+                    "198.51.100.1"
+                  ],
+                  "routes": [
+                    {
+                      "dst": "203.0.113.0/24"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  "hostSnapshot": {
+    "nodeName": "worker-2",
+    "collectedAt": "2026-01-01T00:00:00Z",
+    "sources": [
+      {
+        "name": "links",
+        "status": "OK"
+      },
+      {
+        "name": "addresses",
+        "status": "OK"
+      },
+      {
+        "name": "routes",
+        "status": "OK"
+      },
+      {
+        "name": "bridge-vlans",
+        "status": "OK"
+      },
+      {
+        "name": "namespaces",
+        "status": "OK"
+      },
+      {
+        "name": "bonding",
+        "status": "Skipped",
+        "message": "no Linux bonds present"
+      },
+      {
+        "name": "ovsdb",
+        "status": "OK"
+      },
+      {
+        "name": "ovs-bonds",
+        "status": "OK",
+        "command": [
+          "ovs-appctl",
+          "bond/show"
+        ]
+      },
+      {
+        "name": "ovs-lacp",
+        "status": "OK",
+        "command": [
+          "ovs-appctl",
+          "lacp/show"
+        ]
+      },
+      {
+        "name": "ovs-flows",
+        "status": "OK",
+        "command": [
+          "ovs-ofctl",
+          "dump-flows",
+          "\u003cbridge\u003e"
+        ]
+      }
+    ]
+  },
+  "host": {
+    "snapshotNode": "worker-2",
+    "vmiNode": "worker-2",
+    "nodeMatch": true,
+    "paths": [
+      {
+        "network": "default",
+        "kind": "PodNetwork",
+        "deviceState": "NotApplicable",
+        "podPortState": "NotApplicable",
+        "notes": [
+          "the cluster network data path is CNI-specific; netdoctor checks host routes for it with diagnose --destination"
+        ]
+      },
+      {
+        "network": "data",
+        "kind": "OVS",
+        "declaredDevice": "br-data",
+        "declaredVlan": 200,
+        "declaredMtu": 9000,
+        "deviceState": "Found",
+        "device": {
+          "name": "br-data",
+          "type": "ovs-bridge",
+          "operState": "up",
+          "mtu": 9000,
+          "flows": {
+            "count": 1,
+            "hasNormal": true
+          }
+        },
+        "podPortState": "Found",
+        "podPort": {
+          "name": "veth3e9a1c7b",
+          "bridge": "br-data",
+          "tag": 200,
+          "vlanMode": "access",
+          "mtu": 9000,
+          "matchedBy": "external_ids owner+contPodUid+contIface"
+        },
+        "uplinks": [
+          {
+            "name": "bond1",
+            "type": "ovs-bond",
+            "vlans": [
+              {
+                "min": 200,
+                "max": 200
+              },
+              {
+                "min": 300,
+                "max": 300
+              }
+            ],
+            "vlanInfo": "trunk 200,300",
+            "bond": {
+              "name": "bond1",
+              "type": "ovs",
+              "mode": "balance-tcp",
+              "members": [
+                {
+                  "name": "ens1f0",
+                  "detached": false,
+                  "partnerId": "02:aa:00:00:00:01",
+                  "mtu": 9000
+                },
+                {
+                  "name": "ens1f1",
+                  "detached": false,
+                  "partnerId": "02:aa:00:00:00:01",
+                  "mtu": 9000
+                }
+              ],
+              "runtimeObserved": true
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "graph": {
+    "nodes": [
+      {
+        "id": "VirtualMachine/demo/db-03",
+        "kind": "VirtualMachine",
+        "name": "demo/db-03",
+        "attributes": {
+          "runStrategy": "Always",
+          "status": "Running"
+        }
+      },
+      {
+        "id": "VirtualMachineInstance/demo/db-03",
+        "kind": "VirtualMachineInstance",
+        "name": "demo/db-03",
+        "attributes": {
+          "guestAgent": "Connected",
+          "phase": "Running"
+        }
+      },
+      {
+        "id": "Node/worker-2",
+        "kind": "Node",
+        "name": "worker-2"
+      },
+      {
+        "id": "LauncherPod/demo/virt-launcher-db-03-p8w4k",
+        "kind": "LauncherPod",
+        "name": "demo/virt-launcher-db-03-p8w4k",
+        "attributes": {
+          "phase": "Running",
+          "uid": "1b6d1f0e-0000-4000-8000-000000000003"
+        }
+      },
+      {
+        "id": "VMINetwork/demo/db-03/default",
+        "kind": "VMINetwork",
+        "name": "demo/db-03/default",
+        "attributes": {
+          "binding": "masquerade",
+          "source": "pod"
+        }
+      },
+      {
+        "id": "GuestInterface/demo/db-03/default",
+        "kind": "GuestInterface",
+        "name": "demo/db-03/default",
+        "attributes": {
+          "infoSource": "domain, guest-agent",
+          "interfaceName": "enp1s0",
+          "ips": "10.244.2.33",
+          "mac": "02:00:00:00:00:0e"
+        }
+      },
+      {
+        "id": "PodInterface/demo/virt-launcher-db-03-p8w4k/eth0",
+        "kind": "PodInterface",
+        "name": "demo/virt-launcher-db-03-p8w4k/eth0",
+        "attributes": {
+          "ips": "10.244.2.33",
+          "mac": "0a:58:0a:f4:02:21",
+          "network": "k8s-pod-network"
+        }
+      },
+      {
+        "id": "ClusterNetwork/k8s-pod-network",
+        "kind": "ClusterNetwork",
+        "name": "k8s-pod-network"
+      },
+      {
+        "id": "VMINetwork/demo/db-03/data",
+        "kind": "VMINetwork",
+        "name": "demo/db-03/data",
+        "attributes": {
+          "binding": "bridge",
+          "source": "multus"
+        }
+      },
+      {
+        "id": "GuestInterface/demo/db-03/data",
+        "kind": "GuestInterface",
+        "name": "demo/db-03/data",
+        "attributes": {
+          "infoSource": "domain, guest-agent, multus-status",
+          "interfaceName": "enp2s0",
+          "ips": "198.51.100.33",
+          "mac": "02:00:00:00:c8:03"
+        }
+      },
+      {
+        "id": "PodInterface/demo/virt-launcher-db-03-p8w4k/pod3e9a1c7b2d0",
+        "kind": "PodInterface",
+        "name": "demo/virt-launcher-db-03-p8w4k/pod3e9a1c7b2d0",
+        "attributes": {
+          "mac": "02:00:00:00:c8:03",
+          "network": "demo/ovs-vlan200"
+        }
+      },
+      {
+        "id": "NetworkAttachmentDefinition/demo/ovs-vlan200",
+        "kind": "NetworkAttachmentDefinition",
+        "name": "demo/ovs-vlan200",
+        "attributes": {
+          "cni": "ovs(br=br-data,vlan=200)",
+          "lookup": "Found"
+        }
+      },
+      {
+        "id": "OVSBridge/br-data",
+        "kind": "OVSBridge",
+        "name": "br-data",
+        "attributes": {
+          "mtu": "9000",
+          "operState": "up",
+          "type": "ovs-bridge"
+        }
+      },
+      {
+        "id": "OVSPort/veth3e9a1c7b",
+        "kind": "OVSPort",
+        "name": "veth3e9a1c7b",
+        "attributes": {
+          "bridge": "br-data",
+          "tag": "200",
+          "vlanMode": "access"
+        }
+      },
+      {
+        "id": "HostInterface/bond1",
+        "kind": "HostInterface",
+        "name": "bond1",
+        "attributes": {
+          "type": "ovs-bond",
+          "vlans": "200,300"
+        }
+      },
+      {
+        "id": "Bond/bond1",
+        "kind": "Bond",
+        "name": "bond1",
+        "attributes": {
+          "mode": "balance-tcp",
+          "type": "ovs"
+        }
+      },
+      {
+        "id": "BondMember/bond1/ens1f0",
+        "kind": "BondMember",
+        "name": "bond1/ens1f0",
+        "attributes": {
+          "partner": "02:aa:00:00:00:01",
+          "state": "attached"
+        }
+      },
+      {
+        "id": "BondMember/bond1/ens1f1",
+        "kind": "BondMember",
+        "name": "bond1/ens1f1",
+        "attributes": {
+          "partner": "02:aa:00:00:00:01",
+          "state": "attached"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "from": "VirtualMachine/demo/db-03",
+        "to": "VirtualMachineInstance/demo/db-03",
+        "relation": "runs",
+        "provenance": "Observed",
+        "evidence": "VMI owned by the VM"
+      },
+      {
+        "from": "VirtualMachineInstance/demo/db-03",
+        "to": "Node/worker-2",
+        "relation": "scheduled-on",
+        "provenance": "Observed",
+        "evidence": "VMI status.nodeName"
+      },
+      {
+        "from": "VirtualMachineInstance/demo/db-03",
+        "to": "LauncherPod/demo/virt-launcher-db-03-p8w4k",
+        "relation": "hosted-by",
+        "provenance": "Observed",
+        "evidence": "single active virt-launcher pod owned by the VMI"
+      },
+      {
+        "from": "LauncherPod/demo/virt-launcher-db-03-p8w4k",
+        "to": "Node/worker-2",
+        "relation": "scheduled-on",
+        "provenance": "Observed",
+        "evidence": "pod spec.nodeName"
+      },
+      {
+        "from": "VirtualMachineInstance/demo/db-03",
+        "to": "VMINetwork/demo/db-03/default",
+        "relation": "declares",
+        "provenance": "Declared",
+        "evidence": "VMI spec.networks / spec.domain.devices.interfaces"
+      },
+      {
+        "from": "VMINetwork/demo/db-03/default",
+        "to": "GuestInterface/demo/db-03/default",
+        "relation": "realized-as",
+        "provenance": "Observed",
+        "evidence": "VMI status.interfaces"
+      },
+      {
+        "from": "LauncherPod/demo/virt-launcher-db-03-p8w4k",
+        "to": "PodInterface/demo/virt-launcher-db-03-p8w4k/eth0",
+        "relation": "has-interface",
+        "provenance": "Observed",
+        "evidence": "Multus network-status"
+      },
+      {
+        "from": "VMINetwork/demo/db-03/default",
+        "to": "PodInterface/demo/virt-launcher-db-03-p8w4k/eth0",
+        "relation": "attached-via",
+        "provenance": "Observed",
+        "evidence": "matched by defaultFlag"
+      },
+      {
+        "from": "GuestInterface/demo/db-03/default",
+        "to": "PodInterface/demo/virt-launcher-db-03-p8w4k/eth0",
+        "relation": "bound-to",
+        "provenance": "Inferred",
+        "evidence": "masquerade binding: guest traffic is NATed to the pod interface address"
+      },
+      {
+        "from": "PodInterface/demo/virt-launcher-db-03-p8w4k/eth0",
+        "to": "ClusterNetwork/k8s-pod-network",
+        "relation": "member-of",
+        "provenance": "Declared",
+        "evidence": "pod network (primary CNI)"
+      },
+      {
+        "from": "VirtualMachineInstance/demo/db-03",
+        "to": "VMINetwork/demo/db-03/data",
+        "relation": "declares",
+        "provenance": "Declared",
+        "evidence": "VMI spec.networks / spec.domain.devices.interfaces"
+      },
+      {
+        "from": "VMINetwork/demo/db-03/data",
+        "to": "GuestInterface/demo/db-03/data",
+        "relation": "realized-as",
+        "provenance": "Observed",
+        "evidence": "VMI status.interfaces"
+      },
+      {
+        "from": "LauncherPod/demo/virt-launcher-db-03-p8w4k",
+        "to": "PodInterface/demo/virt-launcher-db-03-p8w4k/pod3e9a1c7b2d0",
+        "relation": "has-interface",
+        "provenance": "Observed",
+        "evidence": "Multus network-status"
+      },
+      {
+        "from": "VMINetwork/demo/db-03/data",
+        "to": "PodInterface/demo/virt-launcher-db-03-p8w4k/pod3e9a1c7b2d0",
+        "relation": "attached-via",
+        "provenance": "Observed",
+        "evidence": "matched by podInterfaceName"
+      },
+      {
+        "from": "GuestInterface/demo/db-03/data",
+        "to": "PodInterface/demo/virt-launcher-db-03-p8w4k/pod3e9a1c7b2d0",
+        "relation": "bound-to",
+        "provenance": "Inferred",
+        "evidence": "bridge binding: the pod interface is bridged to the guest at layer 2"
+      },
+      {
+        "from": "VMINetwork/demo/db-03/data",
+        "to": "NetworkAttachmentDefinition/demo/ovs-vlan200",
+        "relation": "references",
+        "provenance": "Declared",
+        "evidence": "spec.networks[].multus.networkName"
+      },
+      {
+        "from": "PodInterface/demo/virt-launcher-db-03-p8w4k/pod3e9a1c7b2d0",
+        "to": "NetworkAttachmentDefinition/demo/ovs-vlan200",
+        "relation": "created-from",
+        "provenance": "Observed",
+        "evidence": "network-status entry names the NAD"
+      },
+      {
+        "from": "NetworkAttachmentDefinition/demo/ovs-vlan200",
+        "to": "OVSBridge/br-data",
+        "relation": "uses-host-device",
+        "provenance": "Declared",
+        "evidence": "NAD config names \"br-data\"; present in the host snapshot"
+      },
+      {
+        "from": "PodInterface/demo/virt-launcher-db-03-p8w4k/pod3e9a1c7b2d0",
+        "to": "OVSPort/veth3e9a1c7b",
+        "relation": "plugged-into",
+        "provenance": "Observed",
+        "evidence": "external_ids owner+contPodUid+contIface"
+      },
+      {
+        "from": "OVSPort/veth3e9a1c7b",
+        "to": "OVSBridge/br-data",
+        "relation": "port-of",
+        "provenance": "Observed",
+        "evidence": "OVSDB Bridge.ports"
+      },
+      {
+        "from": "OVSBridge/br-data",
+        "to": "HostInterface/bond1",
+        "relation": "uplink",
+        "provenance": "Observed",
+        "evidence": "host snapshot port membership"
+      },
+      {
+        "from": "HostInterface/bond1",
+        "to": "Bond/bond1",
+        "relation": "is-bond",
+        "provenance": "Observed",
+        "evidence": "host snapshot"
+      },
+      {
+        "from": "Bond/bond1",
+        "to": "BondMember/bond1/ens1f0",
+        "relation": "member",
+        "provenance": "Observed",
+        "evidence": "host snapshot bond membership"
+      },
+      {
+        "from": "Bond/bond1",
+        "to": "BondMember/bond1/ens1f1",
+        "relation": "member",
+        "provenance": "Observed",
+        "evidence": "host snapshot bond membership"
+      }
+    ],
+    "gaps": [],
+    "absent": []
+  },
+  "scope": "Read-only Kubernetes API inspection plus a host snapshot of node worker-2 collected at 2026-01-01T00:00:00Z. Host state may have changed since; configuration does not prove forwarding. Guest and switch state were not observed."
+}

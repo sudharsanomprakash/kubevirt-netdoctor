@@ -132,15 +132,15 @@ func ovsMap(raw json.RawMessage) map[string]string {
 func ParseOVSDB(bridges, ports, interfaces []byte) (*OVS, error) {
 	bRows, err := decodeTable(bridges)
 	if err != nil {
-		return nil, fmt.Errorf("Bridge table: %w", err)
+		return nil, fmt.Errorf("bridge table: %w", err)
 	}
 	pRows, err := decodeTable(ports)
 	if err != nil {
-		return nil, fmt.Errorf("Port table: %w", err)
+		return nil, fmt.Errorf("port table: %w", err)
 	}
 	iRows, err := decodeTable(interfaces)
 	if err != nil {
-		return nil, fmt.Errorf("Interface table: %w", err)
+		return nil, fmt.Errorf("interface table: %w", err)
 	}
 
 	ifaceByUUID := map[string]string{}

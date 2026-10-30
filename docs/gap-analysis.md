@@ -41,13 +41,13 @@ existing tools.
 
 The gap netdoctor fills: **KubeVirt-centric correlation** from a VM interface through the
 launcher pod, Multus and the NAD down to the host bridge, OVS port, VLAN, bond and route,
-with every claim labelled by how it was established.
+with every claim labeled by how it was established.
 
 ## 3. Gaps addressed by `feature/network-diagnostics`
 
 | Gap | Delivered |
 | --- | --- |
-| Topology graph with provenance | `kubectl netdoctor topology` builds nodes and edges; every edge is labelled `Observed`, `Inferred` or `Declared`. |
+| Topology graph with provenance | `kubectl netdoctor topology` builds nodes and edges; every edge is labeled `Observed`, `Inferred` or `Declared`. |
 | Correlation method transparency | Each pod attachment records how it was matched (`podInterfaceName`, request interface, default flag, or order of occurrence). |
 | Binding semantics | Binding types explain the guest-to-pod relationship (inferred edges). |
 | IPAM details and VLAN trunks | Subnets, gateways, routes and static addresses from `host-local`, `static` and `whereabouts`; trunk VLAN ranges for Linux bridge and OVS CNI. |
