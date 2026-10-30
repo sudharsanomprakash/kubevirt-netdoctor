@@ -16,6 +16,7 @@ import (
 const (
 	IDMultusAttachmentMismatch = "MULTUS_ATTACHMENT_MISMATCH"
 	IDHostSnapshotNodeMismatch = "HOST_SNAPSHOT_NODE_MISMATCH"
+	IDHostSnapshotHostname     = "HOST_SNAPSHOT_HOSTNAME_MISMATCH"
 	IDHostCollectorUnavailable = "HOST_COLLECTOR_UNAVAILABLE"
 	IDHostInterfaceMissing     = "HOST_INTERFACE_MISSING"
 	IDHostInterfaceDown        = "HOST_INTERFACE_DOWN"
@@ -94,6 +95,19 @@ func checkHostSnapshot(in *Input) []Finding {
 		}}
 	}
 	var out []Finding
+	if !host.NamesAgree(in.Snapshot.NodeName, in.Snapshot.Hostname) {
+		out = append(out, Finding{
+			ID: IDHostSnapshotHostname, Severity: SeverityWarning, Category: Suspected,
+			Resource: snapshotResource(in),
+			Summary:  "The host snapshot was collected on a host whose name differs from its node name; host findings may describe another machine",
+			Evidence: []string{
+				"snapshot nodeName: " + in.Snapshot.NodeName,
+				"snapshot hostname: " + in.Snapshot.Hostname,
+			},
+			Expected:   "hostname matching the node name (unless the kubelet overrides the node name)",
+			NextAction: "Confirm the collector ran on node " + in.Snapshot.NodeName + "; if not, collect again on that node.",
+		})
+	}
 	for _, src := range in.Snapshot.Sources {
 		if src.Status != host.StatusFailed {
 			continue

@@ -66,7 +66,8 @@ func TestHostCollectToStdout(t *testing.T) {
 
 func TestHostCollectToFile(t *testing.T) {
 	file := filepath.Join(t.TempDir(), "snap.json")
-	out, _, err := runHost(t, "host", "collect", "--node-name", "worker-7", "--file", file, "--skip-ovs")
+	// An FQDN node name agrees with the short hostname.
+	out, _, err := runHost(t, "host", "collect", "--node-name", "node-a.example.internal", "--file", file, "--skip-ovs")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,10 +82,27 @@ func TestHostCollectToFile(t *testing.T) {
 		t.Errorf("snapshot file mode = %v, want 0600", info.Mode().Perm())
 	}
 	snap, err := host.LoadSnapshot(file)
-	if err != nil || snap.NodeName != "worker-7" {
+	if err != nil || snap.NodeName != "node-a.example.internal" {
 		t.Errorf("snapshot: %+v %v", snap, err)
 	}
 	if src, _ := snap.Source(host.SourceOVSDB); src.Status != host.StatusSkipped {
 		t.Errorf("--skip-ovs: %+v", src)
+	}
+}
+
+// Collecting on one host while labeling the snapshot with another node is a
+// real operator mistake; it is refused unless explicitly allowed.
+func TestHostCollectRefusesMismatchedNodeName(t *testing.T) {
+	_, _, err := runHost(t, "host", "collect", "--node-name", "worker-2.example.internal")
+	if err == nil || !strings.Contains(err.Error(), "does not match this host") {
+		t.Fatalf("expected refusal, got %v", err)
+	}
+	out, _, err := runHost(t, "host", "collect", "--node-name", "worker-2", "--allow-node-name-mismatch")
+	if err != nil {
+		t.Fatal(err)
+	}
+	snap, err := host.DecodeSnapshot([]byte(out))
+	if err != nil || snap.NodeName != "worker-2" || snap.Hostname != "node-a" {
+		t.Errorf("override: %+v %v", snap, err)
 	}
 }

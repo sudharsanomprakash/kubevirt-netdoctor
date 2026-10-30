@@ -37,6 +37,7 @@ func newHostCollectCommand(streams genericiooptions.IOStreams, env HostEnv) *cob
 	var (
 		nodeName, file   string
 		skipOVS, noFlows bool
+		allowMismatch    bool
 		cmdTimeout       time.Duration
 	)
 	cmd := &cobra.Command{
@@ -68,6 +69,10 @@ recorded as Failed in the snapshot instead of aborting.`,
 			if nodeName == "" {
 				return fmt.Errorf("could not determine the node name; pass --node-name")
 			}
+			if !host.NamesAgree(nodeName, hostname) && !allowMismatch {
+				return fmt.Errorf("--node-name %q does not match this host (%q): the snapshot must be collected on the node it describes. "+
+					"Run the collector on that node, or pass --allow-node-name-mismatch if the kubelet uses a different node name", nodeName, hostname)
+			}
 			snap, err := host.Collect(cmd.Context(), env.Runner, os.DirFS(env.ProcRoot), host.CollectOptions{
 				NodeName: nodeName, Hostname: hostname, SkipOVS: skipOVS, SkipFlows: noFlows, CommandTimeout: cmdTimeout,
 			})
@@ -96,6 +101,7 @@ recorded as Failed in the snapshot instead of aborting.`,
 	}
 	cmd.Flags().StringVar(&nodeName, "node-name", "", "Kubernetes node name to record (defaults to the hostname)")
 	cmd.Flags().StringVarP(&file, "file", "f", "", "Write the snapshot to this file (mode 0600) instead of stdout")
+	cmd.Flags().BoolVar(&allowMismatch, "allow-node-name-mismatch", false, "Allow a --node-name that differs from this host's name (kubelet --hostname-override)")
 	cmd.Flags().BoolVar(&skipOVS, "skip-ovs", false, "Do not collect Open vSwitch state")
 	cmd.Flags().BoolVar(&noFlows, "skip-flows", false, "Do not summarize OpenFlow tables")
 	cmd.Flags().DurationVar(&cmdTimeout, "command-timeout", 10*time.Second, "Timeout for each command")

@@ -89,6 +89,19 @@ func TestParseAddressesAndRoutes(t *testing.T) {
 	if def, _ := ParseRoutes([]byte(`[{"dst":"default","dev":"eth0"}]`), true); def[0].Dst != "::/0" {
 		t.Errorf("ipv6 default = %s", def[0].Dst)
 	}
+
+	// Unnamed protocols and table IDs may be printed as numbers; table 254 is main.
+	numeric, err := ParseRoutes([]byte(`[{"type":"blackhole","dst":"192.0.2.0/24","protocol":80},
+		{"dst":"198.51.100.0/24","dev":"eth0","table":254},{"dst":"203.0.113.0/24","dev":"eth0","table":100}]`), false)
+	if err != nil {
+		t.Fatalf("numeric fields: %v", err)
+	}
+	if numeric[0].Protocol != "80" || numeric[0].Type != "blackhole" || numeric[1].Table != "main" || numeric[2].Table != "100" {
+		t.Errorf("numeric fields: %+v", numeric)
+	}
+	if _, err := ParseRoutes([]byte(`[{"dst":"192.0.2.0/24","protocol":{"x":1}}]`), false); err == nil {
+		t.Error("an object where a string or number is expected must fail")
+	}
 }
 
 func TestParseBridgeVLANs(t *testing.T) {
@@ -356,6 +369,23 @@ func TestBridgeNameValidation(t *testing.T) {
 	} {
 		if got := validBridgeName(name); got != want {
 			t.Errorf("validBridgeName(%q) = %v, want %v", name, got, want)
+		}
+	}
+}
+
+func TestNamesAgree(t *testing.T) {
+	for _, tc := range []struct {
+		node, hostname string
+		want           bool
+	}{
+		{"worker-1", "worker-1", true},
+		{"worker-1.example.internal", "worker-1", true},
+		{"Worker-1.example.internal", "worker-1.lab", true},
+		{"worker-2.example.internal", "worker-1", false},
+		{"worker-1", "", true},
+	} {
+		if got := NamesAgree(tc.node, tc.hostname); got != tc.want {
+			t.Errorf("NamesAgree(%q, %q) = %v", tc.node, tc.hostname, got)
 		}
 	}
 }

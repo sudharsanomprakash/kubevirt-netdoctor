@@ -147,10 +147,24 @@ func Build(t *topology.Topology, hp *hostpath.Result) *Graph {
 	for _, n := range t.Networks {
 		b.network(t, n, vmiID, podID)
 	}
+	usesPodNetwork := false
+	for _, n := range t.Networks {
+		if n.Source == topology.SourcePod || n.MultusDefault {
+			usesPodNetwork = true
+		}
+	}
 	for _, a := range t.UnmatchedPodAttachments {
-		id := b.node(KindPodIface, podKey(t, a.Interface), map[string]string{"network": a.NetworkName, "mac": a.MAC, "ips": strings.Join(a.IPs, ",")})
+		attrs := map[string]string{"network": a.NetworkName, "mac": a.MAC, "ips": strings.Join(a.IPs, ",")}
+		evidence := "Multus network-status (not attributed to any VMI network)"
+		if a.Default && !usesPodNetwork {
+			// KubeVirt always attaches the launcher pod to the cluster
+			// network, even when the VMI does not use it.
+			attrs["role"] = "launcher pod cluster network; the VMI has no pod network and does not use it"
+			evidence = "Multus network-status (default network of the launcher pod)"
+		}
+		id := b.node(KindPodIface, podKey(t, a.Interface), attrs)
 		if podID != "" {
-			b.edge(podID, id, "has-interface", Observed, "Multus network-status (not attributed to any VMI network)")
+			b.edge(podID, id, "has-interface", Observed, evidence)
 		}
 	}
 

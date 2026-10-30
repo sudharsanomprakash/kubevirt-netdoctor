@@ -161,6 +161,16 @@ func TestDiagnoseScenarios(t *testing.T) {
 			args:   []string{"vm/db-03"}, wantIDs: []string{"HOST_SNAPSHOT_NODE_MISMATCH", "TOPOLOGY_INCOMPLETE"}, golden: "diagnose-node-mismatch.json",
 		},
 		{
+			name: "snapshot collected on a different host", fixture: "ovs-vlan-running.yaml", snapshot: "worker-2-ovs.json",
+			mutate: func(s *host.Snapshot) { s.Hostname = "worker-1" },
+			args:   []string{"vm/db-03"}, wantIDs: []string{"HOST_SNAPSHOT_HOSTNAME_MISMATCH"}, golden: "diagnose-hostname-mismatch.json",
+		},
+		{
+			name: "secondary network with guest-configured addressing", fixture: "ovs-secondary-only.yaml",
+			args:    []string{"vm/app-07", "-n", "apps", "--destination", "192.0.2.51"},
+			wantIDs: []string{"ROUTE_UNDETERMINED", "TOPOLOGY_INCOMPLETE"}, golden: "diagnose-guest-configured.json",
+		},
+		{
 			name: "missing NAD without host data", fixture: "nad-missing-scheduling.yaml",
 			args:    []string{"vm/app-03", "--destination", "192.0.2.50"},
 			wantIDs: []string{"LAUNCHER_POD_MISSING", "NAD_NOT_FOUND", "TOPOLOGY_INCOMPLETE", "VMI_NOT_RUNNING"},
@@ -171,7 +181,9 @@ func TestDiagnoseScenarios(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			clients := fakecluster.New(t, []string{fixture(tc.fixture)})
 			args := append([]string{"diagnose"}, tc.args...)
-			args = append(args, "-n", "demo")
+			if !containsArg(tc.args, "-n") {
+				args = append(args, "-n", "demo")
+			}
 			if tc.snapshot != "" {
 				args = append(args, "--host-snapshot", snapshotFile(t, tc.snapshot, tc.mutate))
 			}
@@ -233,12 +245,15 @@ func TestTopologyScenarios(t *testing.T) {
 		{"ovs topology json", "ovs-vlan-running.yaml", "worker-2-ovs.json", "topology-ovs.json", []string{"vm/db-03", "-o", "json"}},
 		{"linux bridge topology", "bridge-vlan-running.yaml", "worker-1-linux-bridge.json", "topology-linux-bridge.txt", []string{"vm/web-01"}},
 		{"topology without host snapshot", "attachment-missing.yaml", "", "topology-no-host.txt", []string{"vmi/edge-05"}},
+		{"secondary-only VM keeps launcher cluster interface", "ovs-secondary-only.yaml", "", "topology-secondary-only.txt", []string{"vm/app-07", "-n", "apps"}},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			clients := fakecluster.New(t, []string{fixture(tc.fixture)})
 			args := append([]string{"topology"}, tc.args...)
-			args = append(args, "-n", "demo")
+			if !containsArg(tc.args, "-n") {
+				args = append(args, "-n", "demo")
+			}
 			if tc.snapshot != "" {
 				args = append(args, "--host-snapshot", snapshotFile(t, tc.snapshot, nil))
 			}
@@ -296,4 +311,13 @@ func TestDiagnoseInputErrors(t *testing.T) {
 			t.Errorf("%s: expected an error", name)
 		}
 	}
+}
+
+func containsArg(args []string, want string) bool {
+	for _, a := range args {
+		if a == want {
+			return true
+		}
+	}
+	return false
 }
