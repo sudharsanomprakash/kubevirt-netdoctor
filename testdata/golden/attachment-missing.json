@@ -126,7 +126,13 @@
                 "description": "Linux bridge (cnv-bridge)",
                 "role": "interface",
                 "bridge": "br-front",
-                "ipam": "whereabouts"
+                "ipam": "whereabouts",
+                "ipamConfig": {
+                  "type": "whereabouts",
+                  "subnets": [
+                    "198.51.100.0/24"
+                  ]
+                }
               }
             ]
           }

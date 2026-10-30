@@ -38,6 +38,21 @@ type CNIPlugin struct {
 	Topology string `json:"topology,omitempty"`
 	MTU      *int   `json:"mtu,omitempty"`
 	IPAM     string `json:"ipam,omitempty"`
+	// TrunkVLANs are the VLAN IDs allowed by "vlanTrunk" (Linux bridge) or
+	// "trunk" (OVS CNI).
+	TrunkVLANs []VLANRange `json:"trunkVLANs,omitempty"`
+	// IPAMConfig holds the parsed addressing configuration, when present.
+	IPAMConfig *IPAM `json:"ipamConfig,omitempty"`
+}
+
+// AllowsVLAN reports whether the plugin's trunk definition includes the VLAN.
+func (p *CNIPlugin) AllowsVLAN(vlan int) bool {
+	for _, r := range p.TrunkVLANs {
+		if r.Contains(vlan) {
+			return true
+		}
+	}
+	return false
 }
 
 // Primary returns the first interface-creating plugin, or nil.
@@ -135,18 +150,20 @@ func ParseCNIConfig(raw string) (*CNIConfig, error) {
 			return nil, errors.New(`"plugins" list is empty`)
 		}
 		for i, p := range list {
-			plugin, err := parsePlugin(p)
+			plugin, warnings, err := parsePlugin(p)
 			if err != nil {
 				return nil, fmt.Errorf("plugins[%d]: %w", i, err)
 			}
 			cfg.Plugins = append(cfg.Plugins, plugin)
+			cfg.Warnings = append(cfg.Warnings, warnings...)
 		}
 	case hasType:
-		plugin, err := parsePlugin(top)
+		plugin, warnings, err := parsePlugin(top)
 		if err != nil {
 			return nil, err
 		}
 		cfg.Plugins = []CNIPlugin{plugin}
+		cfg.Warnings = append(cfg.Warnings, warnings...)
 	default:
 		return nil, errors.New(`configuration has neither "type" nor "plugins"`)
 	}
@@ -169,13 +186,12 @@ func hasUnknown(plugins []CNIPlugin) bool {
 	return false
 }
 
-func parsePlugin(fields map[string]json.RawMessage) (CNIPlugin, error) {
-	var p CNIPlugin
+func parsePlugin(fields map[string]json.RawMessage) (p CNIPlugin, warnings []string, err error) {
 	if err := optionalString(fields, "type", &p.Type); err != nil {
-		return p, err
+		return p, nil, err
 	}
 	if p.Type == "" {
-		return p, errors.New(`plugin has no "type"`)
+		return p, nil, errors.New(`plugin has no "type"`)
 	}
 	if info, ok := knownPlugins[p.Type]; ok {
 		p.Description, p.Role = info.description, info.role
@@ -188,35 +204,47 @@ func parsePlugin(fields map[string]json.RawMessage) (CNIPlugin, error) {
 		"device": &p.Device, "topology": &p.Topology,
 	} {
 		if err := optionalString(fields, key, dst); err != nil {
-			return p, err
+			return p, nil, err
 		}
 	}
 
-	var err error
 	if p.VLAN, err = optionalInt(fields, "vlan"); err != nil {
-		return p, err
+		return p, nil, err
 	}
 	if p.VLAN != nil && (*p.VLAN < 0 || *p.VLAN > 4094) {
-		return p, fmt.Errorf(`"vlan" %d is outside the valid range 0-4094`, *p.VLAN)
+		return p, nil, fmt.Errorf(`"vlan" %d is outside the valid range 0-4094`, *p.VLAN)
 	}
 	if p.MTU, err = optionalInt(fields, "mtu"); err != nil {
-		return p, err
+		return p, nil, err
 	}
 	// Linux bridge CNI uses "vlanTrunk"; OVS CNI uses "trunk".
-	_, lbTrunk := fields["vlanTrunk"]
-	_, ovsTrunk := fields["trunk"]
-	p.Trunk = lbTrunk || ovsTrunk
+	for _, key := range []string{"vlanTrunk", "trunk"} {
+		raw, ok := fields[key]
+		if !ok || isJSONNull(raw) {
+			continue
+		}
+		p.Trunk = true
+		if p.TrunkVLANs, err = parseTrunk(raw, key); err != nil {
+			return p, nil, err
+		}
+	}
 
 	if rawIPAM, ok := fields["ipam"]; ok && !isJSONNull(rawIPAM) {
 		var ipam map[string]json.RawMessage
 		if err := json.Unmarshal(rawIPAM, &ipam); err != nil {
-			return p, fmt.Errorf(`"ipam" must be an object: %w`, err)
+			return p, nil, fmt.Errorf(`"ipam" must be an object: %w`, err)
 		}
-		if err := optionalString(ipam, "type", &p.IPAM); err != nil {
-			return p, fmt.Errorf("ipam: %w", err)
+		cfg, ipamWarnings, err := parseIPAM(ipam)
+		if err != nil {
+			return p, nil, err
 		}
+		p.IPAM = cfg.Type
+		if cfg.Type != "" {
+			p.IPAMConfig = cfg
+		}
+		warnings = append(warnings, ipamWarnings...)
 	}
-	return p, nil
+	return p, warnings, nil
 }
 
 func optionalString(fields map[string]json.RawMessage, key string, dst *string) error {
