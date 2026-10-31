@@ -59,7 +59,8 @@ with every claim labeled by how it was established.
 
 ## 4. Deliberately not addressed
 
-- Live packet probes, packet capture or OpenFlow tracing.
+- Live packet probes, packet capture or OpenFlow tracing. Opt-in eBPF tracing is
+  proposed in [proposal 0001](proposals/0001-ebpf-trace.md).
 - Automatic deployment of any privileged component (DaemonSet, debug pod).
 - Inspection inside pod or guest network namespaces.
 - `NodeNetworkState` as a host data source (follow-up, see section 2).

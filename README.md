@@ -372,6 +372,9 @@ Planned, not implemented:
 
 - `NodeNetworkState` (kubernetes-nmstate) as an API-only host data source.
 - Live-cluster end-to-end tests (kind + KubeVirt + Multus + OVS) in CI.
+- Opt-in eBPF tracing of a VM's packets along its host data path, reported separately
+  from configuration findings: see [proposal 0001](docs/proposals/0001-ebpf-trace.md)
+  (draft).
 - Opt-in connectivity probes, clearly reported as such.
 - SR-IOV resource and VF state; OVN-Kubernetes secondary network checks.
 - krew plugin index distribution.
