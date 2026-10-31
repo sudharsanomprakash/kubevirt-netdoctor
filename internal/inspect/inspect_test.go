@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/sudharsanomprakash/kubevirt-netdoctor/internal/kube"
@@ -178,5 +179,19 @@ func TestExamplesAreConsistent(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestTargetErrorHintsMissingKubeconfig(t *testing.T) {
+	err := &TargetError{
+		Target: vm("x"), State: kube.StateUnavailable,
+		Err: errors.New(`Get "http://localhost:8080/apis/kubevirt.io/v1/namespaces/demo/virtualmachines/x": dial tcp 127.0.0.1:8080: connect: connection refused`),
+	}
+	if !strings.Contains(err.Error(), "no kubeconfig was loaded") || !strings.Contains(err.Error(), "sudo") {
+		t.Errorf("missing hint: %s", err)
+	}
+	other := &TargetError{Target: vm("x"), State: kube.StateUnavailable, Err: errors.New("i/o timeout")}
+	if strings.Contains(other.Error(), "Hint") {
+		t.Errorf("unexpected hint: %s", other)
 	}
 }

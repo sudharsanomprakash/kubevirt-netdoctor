@@ -18,7 +18,7 @@ network data {binding=bridge, source=multus}
   |  |  |  |  |  +- is-bond -> Bond bond1 {mode=balance-tcp, type=ovs}  [Observed] host snapshot
   |  |  |  |  |  |  +- member -> BondMember bond1/ens1f0 {partner=02:aa:00:00:00:01, state=attached}  [Observed] host snapshot bond membership
   |  |  |  |  |  |  +- member -> BondMember bond1/ens1f1 {partner=02:aa:00:00:00:01, state=attached}  [Observed] host snapshot bond membership
-  |  |  +- plugged-into -> OVSPort veth3e9a1c7b {bridge=br-data, tag=200, vlanMode=access}  [Observed] external_ids owner+contPodUid+contIface
+  |  |  +- plugged-into -> OVSPort veth3e9a1c7b {bridge=br-data, tag=200, vlanMode=access}  [Observed] external_ids contPodUid+contIface
   |  |  |  +- port-of -> OVSBridge br-data {mtu=9000, operState=up, type=ovs-bridge}  [Observed] OVSDB Bridge.ports (shown above)
   +- attached-via -> PodInterface demo/virt-launcher-db-03-p8w4k/pod3e9a1c7b2d0 {mac=02:00:00:00:c8:03, network=demo/ovs-vlan200}  [Observed] matched by podInterfaceName (shown above)
   +- references -> NetworkAttachmentDefinition demo/ovs-vlan200 {cni=ovs(br=br-data,vlan=200), lookup=Found}  [Declared] spec.networks[].multus.networkName (shown above)

@@ -133,7 +133,9 @@ kubectl netdoctor version
 All cluster commands accept the standard kubectl flags (`--kubeconfig`, `--context`,
 `--namespace`, ...), `--output text|json` and `--timeout` (default 60s, covering the
 whole command; individual API requests are also bounded). Ctrl-C cancels in-flight
-requests. Exit status is `0` when the command completed, regardless of findings, and
+requests. `kubectl netdoctor version` reports the git commit the binary was built from
+(from `-ldflags`, or the VCS information Go embeds when building from a checkout).
+Exit status is `0` when the command completed, regardless of findings, and
 `1` when it could not run.
 
 ### Example: topology
@@ -337,6 +339,7 @@ not correlated (`HOST_SNAPSHOT_NODE_MISMATCH`).
 | --- | --- |
 | `Error: VirtualMachine "x" not found` | Wrong name or namespace; use `-n`. |
 | `not permitted to read VirtualMachine` / `ACCESS_DENIED` | Missing RBAC; apply [`examples/rbac.yaml`](examples/rbac.yaml) for the namespace. |
+| `dial tcp 127.0.0.1:8080: connect: connection refused` | No kubeconfig was found, so client-go fell back to `localhost:8080`. Pass `--kubeconfig`/set `KUBECONFIG`. Do not run `inspect`, `topology` or `diagnose` with `sudo`: it resets `HOME` and drops `KUBECONFIG`. Only `host collect` needs elevated privileges. |
 | `the cluster does not serve virtualmachines.kubevirt.io` | KubeVirt is not installed or the context points at another cluster. |
 | `HOST_SNAPSHOT_NODE_MISMATCH` | The snapshot came from another node, or `--node-name` was not the Kubernetes node name. Re-collect on the node in `VMI status.nodeName`. |
 | `ROUTE_UNDETERMINED` | The VM's addressing on a secondary network is configured inside the guest (no NAD IPAM), so the path cannot be derived from configuration. Check `ip route get <destination>` inside the guest. |
@@ -348,8 +351,9 @@ not correlated (`HOST_SNAPSHOT_NODE_MISMATCH`).
 
 - No packet probes, captures or OpenFlow tracing; nothing proves forwarding.
 - Pod and guest network namespaces are not entered. The host veth of a Linux bridge
-  attachment therefore cannot be tied to a specific pod (OVS CNI ports can, through
-  their `external_ids`).
+  attachment therefore cannot be tied to a specific pod. OVS CNI ports can, exactly
+  when OVS CNI records the pod UID in `external_ids`; with older OVS CNI versions the
+  match is by interface name and is reported as Inferred.
 - Host route analysis uses the main table only; policy routing and VRFs are not
   evaluated. The cluster network's own data path (Calico, OVN-Kubernetes, ...) is
   CNI-specific and not modeled beyond the node routing table.

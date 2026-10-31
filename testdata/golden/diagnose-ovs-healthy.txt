@@ -18,7 +18,7 @@ HOST PATH (snapshot of node worker-2, collected 2026-01-01T00:00:00Z)
     note: the cluster network data path is CNI-specific; netdoctor checks host routes for it with diagnose --destination
   data  [OVS br-data: Found]
     device: type ovs-bridge  state up  mtu 9000  1 flows
-    pod port: veth3e9a1c7b on br-data  tag 200  (external_ids owner+contPodUid+contIface)
+    pod port: veth3e9a1c7b on br-data  tag 200  (external_ids contPodUid+contIface)
     uplink: bond1 (ovs-bond, trunk 200,300)
       bond ovs balance-tcp: ens1f0 partner 02:aa:00:00:00:01; ens1f1 partner 02:aa:00:00:00:01
 

@@ -243,13 +243,14 @@
           }
         },
         "podPortState": "Found",
+        "podPortIdentification": "PodUID",
         "podPort": {
           "name": "veth3e9a1c7b",
           "bridge": "br-data",
           "tag": 200,
           "vlanMode": "access",
           "mtu": 9000,
-          "matchedBy": "external_ids owner+contPodUid+contIface"
+          "matchedBy": "external_ids contPodUid+contIface"
         },
         "uplinks": [
           {
@@ -587,7 +588,7 @@
         "to": "OVSPort/veth3e9a1c7b",
         "relation": "plugged-into",
         "provenance": "Observed",
-        "evidence": "external_ids owner+contPodUid+contIface"
+        "evidence": "external_ids contPodUid+contIface"
       },
       {
         "from": "OVSPort/veth3e9a1c7b",

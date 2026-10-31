@@ -243,6 +243,7 @@
           }
         },
         "podPortState": "Missing",
+        "podPortIdentification": "PodUID",
         "uplinks": [
           {
             "name": "bond1",
@@ -289,9 +290,9 @@
       "severity": "Error",
       "category": "Confirmed",
       "resource": "Node worker-2 (host snapshot)",
-      "summary": "No OVS port created by OVS CNI for network \"data\" of the launcher pod exists",
+      "summary": "No OVS port created by OVS CNI for network \"data\" of the launcher pod was found",
       "evidence": [
-        "searched Port external_ids owner=ovs-cni.network.kubevirt.io, contPodUid=1b6d1f0e-0000-4000-8000-000000000003",
+        "searched Port external_ids contPodUid=1b6d1f0e-0000-4000-8000-000000000003; this node's OVS CNI records pod UIDs",
         "Multus reports pod interface pod3e9a1c7b2d0 for this network"
       ],
       "expected": "an OVS CNI port on bridge \"br-data\" (NAD configuration)",

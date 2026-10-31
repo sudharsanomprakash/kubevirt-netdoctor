@@ -5,6 +5,7 @@ package inspect
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -31,8 +32,23 @@ func (e *TargetError) Error() string {
 		return fmt.Sprintf("not permitted to read %s %q in namespace %q (see the RBAC section of the README): %v",
 			e.Target.Kind, e.Target.Name, e.Target.Namespace, e.Err)
 	default:
-		return fmt.Sprintf("reading %s %q in namespace %q: %v", e.Target.Kind, e.Target.Name, e.Target.Namespace, e.Err)
+		msg := fmt.Sprintf("reading %s %q in namespace %q: %v", e.Target.Kind, e.Target.Name, e.Target.Namespace, e.Err)
+		if noKubeconfig(e.Err) {
+			msg += "\nHint: no kubeconfig was loaded, so the client fell back to localhost:8080. Pass --kubeconfig or set KUBECONFIG. " +
+				"Note that sudo resets HOME and drops KUBECONFIG; only 'host collect' needs sudo."
+		}
+		return msg
 	}
+}
+
+// noKubeconfig recognizes client-go's fallback to the insecure local
+// default server, which happens when no kubeconfig is found.
+func noKubeconfig(err error) bool {
+	if err == nil {
+		return false
+	}
+	m := err.Error()
+	return strings.Contains(m, "localhost:8080") || strings.Contains(m, "127.0.0.1:8080")
 }
 
 func (e *TargetError) Unwrap() error { return e.Err }

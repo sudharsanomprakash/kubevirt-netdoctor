@@ -232,16 +232,31 @@ func checkOVSPort(in *Input) []Finding {
 		case hostpath.Missing:
 			f := Finding{
 				ID: IDOVSPortMissing, Resource: snapshotResource(in),
-				Summary: fmt.Sprintf("No OVS port created by OVS CNI for network %q of the launcher pod exists", p.Network),
-				Evidence: []string{fmt.Sprintf("searched Port external_ids %s=%s, %s=%s",
-					host.ExternalIDOwner, host.OVSCNIOwner, host.ExternalIDPodUID, in.Topology.Launcher.Selected.UID)},
+				Summary:    fmt.Sprintf("No OVS port created by OVS CNI for network %q of the launcher pod was found", p.Network),
 				Expected:   fmt.Sprintf("an OVS CNI port on bridge %q (NAD configuration)", p.DeclaredDevice),
 				NextAction: "Check OVS CNI and kubelet logs on the node for CNI ADD/DEL errors; the port may have been removed after the pod started.",
 			}
-			if n != nil && n.PodAttachment != nil {
+			attached := n != nil && n.PodAttachment != nil
+			switch p.PodPortIdentification {
+			case hostpath.IdentifiedByPodUID:
+				f.Evidence = []string{fmt.Sprintf("searched Port external_ids %s=%s; this node's OVS CNI records pod UIDs",
+					host.ExternalIDPodUID, in.Topology.Launcher.Selected.UID)}
+			case hostpath.IdentificationUnavailable:
+				f.Evidence = []string{"no OVS port on this node carries OVS CNI external_ids (owner/contIface)"}
+			default:
+				f.Evidence = []string{
+					fmt.Sprintf("searched Port external_ids %s=%s", host.ExternalIDContIface, podIfaceOf(n)),
+					"this node's OVS CNI does not record pod UIDs, so the search is by interface name only",
+				}
+			}
+			switch {
+			case attached && p.PodPortIdentification == hostpath.IdentifiedByPodUID:
 				f.Severity, f.Category = SeverityError, Confirmed
 				f.Evidence = append(f.Evidence, fmt.Sprintf("Multus reports pod interface %s for this network", n.PodAttachment.Interface))
-			} else {
+			case attached:
+				f.Severity, f.Category = SeverityWarning, Suspected
+				f.Evidence = append(f.Evidence, fmt.Sprintf("Multus reports pod interface %s for this network", n.PodAttachment.Interface))
+			default:
 				f.Severity, f.Category = SeverityWarning, Suspected
 				f.Evidence = append(f.Evidence, "Multus does not report this attachment either")
 			}
@@ -257,6 +272,13 @@ func checkOVSPort(in *Input) []Finding {
 		}
 	}
 	return out
+}
+
+func podIfaceOf(n *topology.NetworkPath) string {
+	if n != nil && n.PodAttachment != nil {
+		return n.PodAttachment.Interface
+	}
+	return "<unknown>"
 }
 
 func checkOVSFlows(in *Input) []Finding {

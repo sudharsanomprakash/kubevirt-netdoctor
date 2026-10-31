@@ -115,9 +115,10 @@ func TestDiagnoseScenarios(t *testing.T) {
 		},
 		{
 			name: "ovs port missing", fixture: "ovs-vlan-running.yaml", snapshot: "worker-2-ovs.json",
+			// The node's OVS CNI records pod UIDs, but the only port left
+			// belongs to another pod: a confirmed absence.
 			mutate: func(s *host.Snapshot) {
-				s.OVS.Ports = s.OVS.Ports[:2]
-				s.OVS.Bridges[0].Ports = s.OVS.Bridges[0].Ports[:2]
+				ovsPort(s, "veth3e9a1c7b").ExternalIDs["contPodUid"] = "9f6d1f0e-0000-4000-8000-0000000000ff"
 			},
 			args: []string{"vm/db-03"}, wantIDs: []string{"OVS_PORT_MISSING"}, golden: "diagnose-ovs-port-missing.json",
 		},
@@ -169,6 +170,47 @@ func TestDiagnoseScenarios(t *testing.T) {
 			name: "secondary network with guest-configured addressing", fixture: "ovs-secondary-only.yaml",
 			args:    []string{"vm/app-07", "-n", "apps", "--destination", "192.0.2.51"},
 			wantIDs: []string{"ROUTE_UNDETERMINED", "TOPOLOGY_INCOMPLETE"}, golden: "diagnose-guest-configured.json",
+		},
+		{
+			name: "older OVS CNI without pod UIDs: port matched by interface name", fixture: "ovs-vlan-running.yaml", snapshot: "worker-2-ovs.json",
+			mutate: func(s *host.Snapshot) { delete(ovsPort(s, "veth3e9a1c7b").ExternalIDs, "contPodUid") },
+			args:   []string{"vm/db-03", "-o", "text"}, golden: "diagnose-ovs-no-poduid.txt",
+		},
+		{
+			name: "older OVS CNI without pod UIDs: two VMs share the interface name", fixture: "ovs-vlan-running.yaml", snapshot: "worker-2-ovs.json",
+			mutate: func(s *host.Snapshot) {
+				p := ovsPort(s, "veth3e9a1c7b")
+				delete(p.ExternalIDs, "contPodUid")
+				other := *p
+				other.Name, other.ExternalIDs = "veth7f0a2b4c", map[string]string{
+					"contIface": p.ExternalIDs["contIface"], "contNetns": "/var/run/netns/cni-2222", "owner": "ovs-cni.network.kubevirt.io",
+				}
+				s.OVS.Ports = append(s.OVS.Ports, other)
+				s.OVS.Bridges[0].Ports = append(s.OVS.Bridges[0].Ports, other.Name)
+			},
+			args: []string{"vm/db-03"}, wantIDs: []string{"TOPOLOGY_INCOMPLETE"}, golden: "diagnose-ovs-ambiguous-port.json",
+		},
+		{
+			name: "older OVS CNI without pod UIDs: no port with the interface name", fixture: "ovs-vlan-running.yaml", snapshot: "worker-2-ovs.json",
+			mutate: func(s *host.Snapshot) {
+				p := ovsPort(s, "veth3e9a1c7b")
+				delete(p.ExternalIDs, "contPodUid")
+				p.ExternalIDs["contIface"] = "pod0000000000a"
+			},
+			args: []string{"vm/db-03"}, wantIDs: []string{"OVS_PORT_MISSING"}, golden: "diagnose-ovs-port-missing-by-name.json",
+		},
+		{
+			name: "internal port is not an uplink", fixture: "ovs-vlan-running.yaml", snapshot: "worker-2-ovs.json",
+			mutate: func(s *host.Snapshot) {
+				// The uplink bond no longer carries VLAN 200; a host-local
+				// internal port tagged 200 must not hide that.
+				ovsPort(s, "bond1").Trunks = []int{300}
+				tag := 200
+				s.OVS.Ports = append(s.OVS.Ports, host.OVSPort{Name: "mgmt", Bridge: "br-data", Interfaces: []string{"mgmt"}, Tag: &tag, VLANMode: "access"})
+				s.OVS.Interfaces = append(s.OVS.Interfaces, host.OVSInterface{Name: "mgmt", Type: "internal", AdminState: "up", LinkState: "up"})
+				s.OVS.Bridges[0].Ports = append(s.OVS.Bridges[0].Ports, "mgmt")
+			},
+			args: []string{"vm/db-03"}, wantIDs: []string{"VLAN_MISMATCH"}, golden: "diagnose-ovs-internal-port.json",
 		},
 		{
 			name: "missing NAD without host data", fixture: "nad-missing-scheduling.yaml",
