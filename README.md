@@ -376,7 +376,10 @@ Planned, not implemented:
 - `NodeNetworkState` (kubernetes-nmstate) as an API-only host data source.
 - Live-cluster end-to-end tests (kind + KubeVirt + Multus + OVS) in CI.
 - Opt-in connectivity probes, clearly reported as such.
-- SR-IOV resource and VF state; OVN-Kubernetes secondary network checks.
+- SR-IOV resource and VF state.
+- OVN-Kubernetes (OpenShift) localnet, overlays and user-defined networks, and Kube-OVN
+  subnets, VLANs and provider networks: see
+  [proposal 0002](docs/proposals/0002-ovn-cni-support.md) (draft).
 - krew plugin index distribution.
 
 See [`docs/gap-analysis.md`](docs/gap-analysis.md) for how this compares with
