@@ -38,6 +38,9 @@ network, and is explicit about what it could not see.
 
 ## What is observed
 
+Which CNI plugins get host-level checks, and which are supported at the Kubernetes API
+level only, is listed in the [CNI support matrix](docs/cni-support.md).
+
 | Layer | Source | Command |
 | --- | --- | --- |
 | VM / VMI spec, phase, node, conditions, guest interfaces | Kubernetes API | all |
@@ -416,8 +419,14 @@ Planned, not implemented:
 
 - `NodeNetworkState` (kubernetes-nmstate) as an API-only host data source.
 - Live-cluster end-to-end tests (kind + KubeVirt + Multus + OVS) in CI.
+- Opt-in eBPF tracing of a VM's packets along its host data path, reported separately
+  from configuration findings: see [proposal 0001](docs/proposals/0001-ebpf-trace.md)
+  (draft).
 - Opt-in connectivity probes, clearly reported as such.
-- SR-IOV resource and VF state; OVN-Kubernetes secondary network checks.
+- SR-IOV resource and VF state.
+- OVN-Kubernetes (OpenShift) localnet, overlays and user-defined networks, and Kube-OVN
+  subnets, VLANs and provider networks: see
+  [proposal 0002](docs/proposals/0002-ovn-cni-support.md) (draft).
 - krew plugin index distribution.
 
 See [`docs/gap-analysis.md`](docs/gap-analysis.md) for how this compares with
