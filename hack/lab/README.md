@@ -28,7 +28,22 @@ test runner deliberately breaks the lab network (and repairs it).
   | `app-vlan100` | App pod | VLAN 100, 192.168.100.20 |
   | `app-vlan200` | App pod | VLAN 200, 192.168.200.20 |
 
-## Steps
+## Quick start (unattended)
+
+From Cloud Shell, or any machine with `gcloud` signed in:
+
+```sh
+git clone -b test/kubevirt-lab https://github.com/sudharsanomprakash/kubevirt-netdoctor
+cd kubevirt-netdoctor
+hack/lab/create-vm.sh auto        # creates the VM; it builds the lab and runs the tests by itself
+hack/lab/create-vm.sh results     # progress, or the summary when finished (about 30-45 minutes)
+hack/lab/create-vm.sh stop        # stop billing when done
+```
+
+On the VM, `sudo nohup hack/lab/run-all.sh >/var/log/netdoctor-lab.log 2>&1 &` re-runs
+everything. It is idempotent and resumes after a fix.
+
+## Steps (manual)
 
 On your workstation, with `gcloud` signed in:
 
@@ -56,6 +71,18 @@ hack/lab/create-vm.sh delete      # removes everything
 
 After a reboot of the lab VM, run `sudo hack/lab/setup.sh network` again. The simulated
 switch, bond and bridges are not persistent.
+
+## Compatibility notes (found on the first live run)
+
+- **KubeVirt manifests need server-side apply.** The `kubevirts.kubevirt.io` CRD exceeds
+  the 256 KiB annotation limit of client-side `kubectl apply`.
+- **KubeVirt v1.10 mounts container disks as Kubernetes image volumes.** This needs:
+  - containerd 2.1 or newer (Ubuntu 24.04 ships 1.7, so `setup.sh` installs `containerd.io`
+    from Docker's repository);
+  - on Kubernetes 1.34 and older, the `ImageVolume` feature gate on the API server and the
+    kubelet (`setup.sh` enables it).
+
+  Without these, VMs fail with `failed to find disk file from ImageVolume`.
 
 ## Scenarios
 
