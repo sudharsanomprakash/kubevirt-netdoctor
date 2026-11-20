@@ -2,6 +2,8 @@
 # Creates, starts, stops or deletes the netdoctor lab VM on Google Compute Engine.
 # Run on a workstation where `gcloud auth login` and a default project are set.
 #
+#   hack/lab/create-vm.sh auto     # create the VM and run the whole lab unattended
+#   hack/lab/create-vm.sh results  # progress, or the test summary when finished
 #   hack/lab/create-vm.sh create   # n2-standard-8, nested virtualization, Ubuntu 24.04
 #   hack/lab/create-vm.sh ssh      # open a shell on it
 #   hack/lab/create-vm.sh stop     # stop billing for CPU/RAM (disk is still billed)
@@ -14,7 +16,58 @@ ZONE="${LAB_ZONE:-us-central1-a}"
 MACHINE="${LAB_MACHINE:-n2-standard-8}"
 DISK_GB="${LAB_DISK_GB:-100}"
 
+REPO="${LAB_REPO:-https://github.com/sudharsanomprakash/kubevirt-netdoctor}"
+BRANCH="${LAB_BRANCH:-test/kubevirt-lab}"
+
+# Startup script for "auto": on first boot, clone the repository and run the
+# whole lab unattended; progress goes to /var/log/netdoctor-lab.log.
+startup_script() {
+	cat <<-EOF
+		#!/bin/bash
+		[ -e /var/lib/netdoctor-lab/started ] && exit 0
+		mkdir -p /var/lib/netdoctor-lab && touch /var/lib/netdoctor-lab/started
+		exec >>/var/log/netdoctor-lab.log 2>&1
+		set -x
+		apt-get update -q && apt-get install -y -q git
+		git clone --depth 1 -b "$BRANCH" "$REPO" /opt/kubevirt-netdoctor
+		cd /opt/kubevirt-netdoctor
+		export HOME=/root
+		if hack/lab/setup.sh && hack/lab/workloads.sh; then
+			OUT=/var/lib/netdoctor-lab/results hack/lab/run-tests.sh
+		fi
+		echo "netdoctor-lab: FINISHED (exit \$?)"
+		touch /var/lib/netdoctor-lab/finished
+	EOF
+}
+
 case "${1:-}" in
+auto)
+	# One command: create the VM and run setup, workloads and tests on it
+	# unattended. Check progress later with: $0 results
+	gcloud services enable compute.googleapis.com
+	script="$(mktemp)"
+	startup_script >"$script"
+	gcloud compute instances create "$NAME" \
+		--zone="$ZONE" --machine-type="$MACHINE" \
+		--enable-nested-virtualization \
+		--image-family=ubuntu-2404-lts-amd64 --image-project=ubuntu-os-cloud \
+		--boot-disk-size="${DISK_GB}GB" --boot-disk-type=pd-balanced \
+		--labels=purpose=netdoctor-lab \
+		--metadata-from-file=startup-script="$script"
+	rm -f "$script"
+	echo
+	echo "The lab is building itself (about 30-45 minutes)."
+	echo "Check progress any time with:  $0 results"
+	;;
+results)
+	# Show progress, or the test summary once the run has finished.
+	gcloud compute ssh "$NAME" --zone="$ZONE" --command='
+		if [ -e /var/lib/netdoctor-lab/finished ]; then
+			sudo cat /var/lib/netdoctor-lab/results/summary.txt
+		else
+			echo "Still running. Last log lines:"; sudo tail -n 15 /var/log/netdoctor-lab.log
+		fi'
+	;;
 create)
 	gcloud services enable compute.googleapis.com
 	gcloud compute instances create "$NAME" \
@@ -45,7 +98,7 @@ copy)
 	gcloud compute ssh "$NAME" --zone="$ZONE" --command='rm -rf ~/kubevirt-netdoctor && mkdir ~/kubevirt-netdoctor && tar -C ~/kubevirt-netdoctor -xzf ~/netdoctor-src.tgz'
 	;;
 *)
-	echo "usage: $0 create|ssh|start|stop|delete|copy" >&2
+	echo "usage: $0 auto|results|create|ssh|start|stop|delete|copy" >&2
 	exit 2
 	;;
 esac
