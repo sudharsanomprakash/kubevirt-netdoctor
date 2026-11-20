@@ -60,3 +60,39 @@ jobs:
         with:
           go-version-file: go.mod
       - run: make dist VERSION=ci
+
+  bpf:
+    name: BPF sources and bindings
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: Install clang
+        run: sudo apt-get update && sudo apt-get install -y clang llvm
+      - name: Compile with -Werror
+        run: make bpf-check
+      - name: Generated Go bindings match the BPF source
+        # Object files differ between clang versions; the Go bindings
+        # (types, program and map names) must not.
+        run: |
+          go generate ./internal/ebpf
+          git diff --exit-code -- 'internal/ebpf/*.go'
+
+  kernel:
+    name: Kernel tracer (real eBPF, root)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: Kernel features
+        run: uname -r && ls -l /sys/kernel/btf/vmlinux
+      - name: Load the tracer and trace real traffic in network namespaces
+        run: sudo -E env "PATH=$PATH" go test -count=1 -v -run 'Trace' ./internal/ebpf ./internal/cli
+      - name: Node capability probe (verifier load)
+        run: |
+          go build -o kubectl-netdoctor ./cmd/kubectl-netdoctor
+          sudo ./kubectl-netdoctor host capabilities

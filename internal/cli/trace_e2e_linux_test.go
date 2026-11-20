@@ -42,13 +42,15 @@ func TestTraceEndToEnd(t *testing.T) {
 	if os.Getenv("NETDOCTOR_BPF_TESTS") == "0" || os.Geteuid() != 0 {
 		t.Skip("needs root (set NETDOCTOR_BPF_TESTS=0 to skip)")
 	}
-	for _, p := range []string{"/sys/kernel/btf/vmlinux", "/sys/fs/cgroup/pids"} {
-		if _, err := os.Stat(p); err != nil {
-			t.Skipf("%s not available", p)
-		}
+	if _, err := os.Stat("/sys/kernel/btf/vmlinux"); err != nil {
+		t.Skip("kernel BTF not available")
+	}
+	cgRoot := podCgroupRoot()
+	if cgRoot == "" {
+		t.Skip("no writable cgroup hierarchy (v1 pids or v2 unified)")
 	}
 	launcherNS, peerNS := setupPodNet(t)
-	startFakeLauncher(t, launcherNS)
+	startFakeLauncher(t, cgRoot, launcherNS)
 
 	dir := t.TempDir()
 	planFile, traceFile := filepath.Join(dir, "plan.json"), filepath.Join(dir, "trace.json")
@@ -186,10 +188,22 @@ func setupPodNet(t *testing.T) (launcher, peer string) {
 	return "/run/netns/" + l, "/run/netns/" + p
 }
 
+// podCgroupRoot picks a cgroup hierarchy to create the test pod cgroup in:
+// cgroup v2 (unified at /sys/fs/cgroup) or the v1 pids controller.
+func podCgroupRoot() string {
+	if _, err := os.Stat("/sys/fs/cgroup/cgroup.controllers"); err == nil {
+		return "/sys/fs/cgroup"
+	}
+	if _, err := os.Stat("/sys/fs/cgroup/pids"); err == nil {
+		return "/sys/fs/cgroup/pids"
+	}
+	return ""
+}
+
 // startFakeLauncher runs a process in the launcher namespace inside a
 // kubelet-style (cgroupfs driver) pod cgroup.
-func startFakeLauncher(t *testing.T, ns string) {
-	cg := filepath.Join("/sys/fs/cgroup/pids/kubepods-netdoctor-test", "pod"+e2ePodUID)
+func startFakeLauncher(t *testing.T, cgRoot, ns string) {
+	cg := filepath.Join(cgRoot, "kubepods-netdoctor-test", "pod"+e2ePodUID)
 	if err := os.MkdirAll(cg, 0o755); err != nil {
 		t.Skipf("cannot create a test cgroup: %v", err)
 	}

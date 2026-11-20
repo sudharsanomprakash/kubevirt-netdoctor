@@ -83,18 +83,12 @@ func WriteMermaid(w io.Writer, g *Graph, title string) error {
 		if from == "" || to == "" {
 			continue
 		}
-		arrow := "-->"
+		arrow, lbl := "-->", e.Relation
 		switch e.Provenance {
 		case Declared:
-			arrow = "-.->"
+			arrow, lbl = "-.->", lbl+" (declared)"
 		case Inferred:
-			arrow = "-.->"
-		}
-		lbl := e.Relation
-		if e.Provenance == Inferred {
-			lbl += " (inferred)"
-		} else if e.Provenance == Declared {
-			lbl += " (declared)"
+			arrow, lbl = "-.->", lbl+" (inferred)"
 		}
 		fmt.Fprintf(&b, "  %s %s|\"%s\"| %s\n", from, arrow, mermaidText(lbl), to)
 	}
