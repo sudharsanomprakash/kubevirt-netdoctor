@@ -32,11 +32,7 @@ startup_script() {
 		git clone --depth 1 -b "$BRANCH" "$REPO" /opt/kubevirt-netdoctor
 		cd /opt/kubevirt-netdoctor
 		export HOME=/root
-		if hack/lab/setup.sh && hack/lab/workloads.sh; then
-			OUT=/var/lib/netdoctor-lab/results hack/lab/run-tests.sh
-		fi
-		echo "netdoctor-lab: FINISHED (exit \$?)"
-		touch /var/lib/netdoctor-lab/finished
+		hack/lab/run-all.sh
 	EOF
 }
 
@@ -63,7 +59,8 @@ results)
 	# Show progress, or the test summary once the run has finished.
 	gcloud compute ssh "$NAME" --zone="$ZONE" --command='
 		if [ -e /var/lib/netdoctor-lab/finished ]; then
-			sudo cat /var/lib/netdoctor-lab/results/summary.txt
+			sudo tail -n 5 /var/log/netdoctor-lab.log
+			sudo cat /var/lib/netdoctor-lab/results/summary.txt 2>/dev/null || sudo grep -n "FAILED\|error\|Error" /var/log/netdoctor-lab.log | tail -n 20
 		else
 			echo "Still running. Last log lines:"; sudo tail -n 15 /var/log/netdoctor-lab.log
 		fi'

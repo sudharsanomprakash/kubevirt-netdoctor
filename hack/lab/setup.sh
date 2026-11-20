@@ -96,9 +96,11 @@ network() {
 
 kubernetes() {
 	LOG "containerd + kubeadm $K8S_MINOR"
-	mkdir -p /etc/containerd
-	containerd config default | sed 's/SystemdCgroup = false/SystemdCgroup = true/' >/etc/containerd/config.toml
-	systemctl restart containerd
+	if ! grep -q 'SystemdCgroup = true' /etc/containerd/config.toml 2>/dev/null; then
+		mkdir -p /etc/containerd
+		containerd config default | sed 's/SystemdCgroup = false/SystemdCgroup = true/' >/etc/containerd/config.toml
+		systemctl restart containerd
+	fi
 	install -d -m 0755 /etc/apt/keyrings
 	curl -fsSL "https://pkgs.k8s.io/core:/stable:/$K8S_MINOR/deb/Release.key" | gpg --batch --yes --dearmor -o /etc/apt/keyrings/kubernetes.gpg
 	echo "deb [signed-by=/etc/apt/keyrings/kubernetes.gpg] https://pkgs.k8s.io/core:/stable:/$K8S_MINOR/deb/ /" >/etc/apt/sources.list.d/kubernetes.list
@@ -108,11 +110,14 @@ kubernetes() {
 		kubeadm init --pod-network-cidr=10.244.0.0/16 --node-name "$(hostname -s)"
 	fi
 	export KUBECONFIG=/etc/kubernetes/admin.conf
-	for u in /root "/home/${SUDO_USER:-ubuntu}"; do
+	for u in /root /home/*; do
 		[ -d "$u" ] || continue
 		mkdir -p "$u/.kube" && cp /etc/kubernetes/admin.conf "$u/.kube/config"
 		chown -R "$(stat -c %U:%G "$u")" "$u/.kube"
 	done
+	# Users who log in later (for example via SSH-in-browser) get it too.
+	echo 'export KUBECONFIG=/etc/kubernetes/admin.conf' >/etc/profile.d/netdoctor-lab-kubeconfig.sh
+	chmod 0644 /etc/kubernetes/admin.conf
 	kubectl taint nodes --all node-role.kubernetes.io/control-plane- 2>/dev/null || true
 	kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
 	kubectl wait --for=condition=Ready node --all --timeout=300s
@@ -125,7 +130,7 @@ addons() {
 	CNAO="${CNAO_VERSION:-$(latest kubevirt/cluster-network-addons-operator)}"
 	LOG "cluster-network-addons-operator $CNAO (Multus, Linux bridge CNI, OVS CNI)"
 	base="https://github.com/kubevirt/cluster-network-addons-operator/releases/download/$CNAO"
-	for f in namespace.yaml network-addons-config.crd.yaml operator.yaml; do kubectl apply -f "$base/$f"; done
+	for f in namespace.yaml network-addons-config.crd.yaml operator.yaml; do kubectl apply --server-side --force-conflicts -f "$base/$f"; done
 	kubectl -n cluster-network-addons wait --for=condition=Available deploy --all --timeout=300s
 	kubectl apply -f - <<-EOF
 		apiVersion: networkaddonsoperator.network.kubevirt.io/v1
@@ -142,8 +147,10 @@ addons() {
 
 	KV="${KUBEVIRT_VERSION:-$(curl -fsSL https://storage.googleapis.com/kubevirt-prow/release/kubevirt/kubevirt/stable.txt)}"
 	LOG "KubeVirt $KV"
-	kubectl apply -f "https://github.com/kubevirt/kubevirt/releases/download/$KV/kubevirt-operator.yaml"
-	kubectl apply -f "https://github.com/kubevirt/kubevirt/releases/download/$KV/kubevirt-cr.yaml"
+	# Server-side apply: the KubeVirt CRD exceeds the 256 KiB annotation limit
+	# that client-side apply needs for last-applied-configuration.
+	kubectl apply --server-side --force-conflicts -f "https://github.com/kubevirt/kubevirt/releases/download/$KV/kubevirt-operator.yaml"
+	kubectl apply --server-side --force-conflicts -f "https://github.com/kubevirt/kubevirt/releases/download/$KV/kubevirt-cr.yaml"
 	kubectl -n kubevirt wait kv kubevirt --for=condition=Available --timeout=900s
 	echo "$KV" >/var/lib/netdoctor-lab-kubevirt-version
 	{
