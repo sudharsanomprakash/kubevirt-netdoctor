@@ -78,8 +78,8 @@ func TestMacvlanMaster(t *testing.T) {
 	s := &host.Snapshot{NodeName: "worker-1", Sources: ok(host.SourceLinks), Interfaces: []host.Interface{
 		{Name: "bond0.50", Kind: "vlan", Parent: "bond0", MTU: 1500, AdminUp: true, OperState: "UP", VLAN: &host.VLANInfo{ID: 50}},
 		{Name: "bond0", Kind: "bond", MTU: 1500, AdminUp: true, OperState: "UP", Bond: &host.BondInfo{Mode: "active-backup"}},
-		{Name: "eno1", Master: "bond0", MTU: 1500, BondMember: &host.BondMemberInfo{MIIStatus: "UP"}},
-		{Name: "eno2", Master: "bond0", MTU: 1500, BondMember: &host.BondMemberInfo{MIIStatus: "DOWN"}},
+		{Name: "eno1", Master: "bond0", MTU: 1500, AdminUp: true, OperState: "UP", BondMember: &host.BondMemberInfo{MIIStatus: "UP"}},
+		{Name: "eno2", Master: "bond0", MTU: 1500, AdminUp: true, OperState: "UP", BondMember: &host.BondMemberInfo{MIIStatus: "DOWN"}},
 	}}
 	p := only(t, Correlate(topo, s))
 	if p.Kind != KindMacvlan || p.DeviceState != Found || len(p.Uplinks) != 1 {
@@ -189,5 +189,32 @@ func TestNotModeledAndUnresolved(t *testing.T) {
 	topo.Networks[0].NAD.Config = nil
 	if p := only(t, Correlate(topo, &host.Snapshot{NodeName: "worker-1"})); p.Kind != KindUnresolved {
 		t.Errorf("unresolved: %+v", p)
+	}
+}
+
+// A member whose own link is down is detached even while the bond driver
+// still reports MII up (it polls every miimon ms, or never with miimon=0).
+// Found on a live lab: "ip link set <member> down" was not reported.
+func TestBondMemberLinkDownBeforeMII(t *testing.T) {
+	topo := withNAD(t, `{"type":"macvlan","master":"bond0"}`, "")
+	s := &host.Snapshot{NodeName: "worker-1", Sources: ok(host.SourceLinks), Interfaces: []host.Interface{
+		{Name: "bond0", Kind: "bond", MTU: 1500, AdminUp: true, OperState: "UP", Bond: &host.BondInfo{Mode: "active-backup"}},
+		{Name: "eno1", Master: "bond0", MTU: 1500, AdminUp: true, OperState: "UP", BondMember: &host.BondMemberInfo{MIIStatus: "UP"}},
+		{Name: "eno2", Master: "bond0", MTU: 1500, AdminUp: false, OperState: "DOWN", BondMember: &host.BondMemberInfo{MIIStatus: "UP"}},
+		{Name: "eno3", Master: "bond0", MTU: 1500, AdminUp: true, OperState: "LOWERLAYERDOWN", BondMember: &host.BondMemberInfo{MIIStatus: "UP"}},
+	}}
+	p := only(t, Correlate(topo, s))
+	bonds := p.Bonds()
+	if len(bonds) != 1 || len(bonds[0].Members) != 3 {
+		t.Fatalf("bonds: %+v", bonds)
+	}
+	m := bonds[0].Members
+	if m[0].Detached {
+		t.Errorf("eno1 is up: %+v", m[0])
+	}
+	for _, d := range m[1:] {
+		if !d.Detached || !strings.Contains(d.Reason, "link down") {
+			t.Errorf("%s must be detached by its link state: %+v", d.Name, d)
+		}
 	}
 }
