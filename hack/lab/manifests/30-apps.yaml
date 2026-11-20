@@ -1,0 +1,26 @@
+# Application pods on the same VLANs as the VMs, used as traffic peers.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: app-vlan100
+  namespace: lab
+  annotations:
+    k8s.v1.cni.cncf.io/networks: '[{"name":"br-vlan100-static","interface":"net1","ips":["192.168.100.20/24"]}]'
+spec:
+  containers:
+    - name: shell
+      image: docker.io/nicolaka/netshoot:latest
+      command: ["sleep", "infinity"]
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: app-vlan200
+  namespace: lab
+  annotations:
+    k8s.v1.cni.cncf.io/networks: '[{"name":"ovs-vlan200-static","interface":"net1","ips":["192.168.200.20/24"]}]'
+spec:
+  containers:
+    - name: shell
+      image: docker.io/nicolaka/netshoot:latest
+      command: ["sleep", "infinity"]

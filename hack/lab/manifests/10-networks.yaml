@@ -1,0 +1,43 @@
+# NetworkAttachmentDefinitions used by the lab. br1 and br-ovs are created by
+# hack/lab/setup.sh. VMs use NADs without IPAM (the guest configures its own
+# address); app pods use the *-static variants so they get a known address.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: lab
+---
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: br-vlan100
+  namespace: lab
+spec:
+  config: '{"cniVersion":"0.3.1","name":"br-vlan100","type":"bridge","bridge":"br1","vlan":100,"ipam":{}}'
+---
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: br-vlan100-static
+  namespace: lab
+spec:
+  config: '{"cniVersion":"0.3.1","name":"br-vlan100-static","type":"bridge","bridge":"br1","vlan":100,"ipam":{"type":"static"},"capabilities":{"ips":true}}'
+---
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: ovs-vlan200
+  namespace: lab
+  annotations:
+    k8s.v1.cni.cncf.io/resourceName: ovs-cni.network.kubevirt.io/br-ovs
+spec:
+  config: '{"cniVersion":"0.4.0","name":"ovs-vlan200","type":"ovs","bridge":"br-ovs","vlan":200}'
+---
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: ovs-vlan200-static
+  namespace: lab
+  annotations:
+    k8s.v1.cni.cncf.io/resourceName: ovs-cni.network.kubevirt.io/br-ovs
+spec:
+  config: '{"cniVersion":"0.4.0","name":"ovs-vlan200-static","type":"ovs","bridge":"br-ovs","vlan":200,"ipam":{"type":"static"},"capabilities":{"ips":true}}'
