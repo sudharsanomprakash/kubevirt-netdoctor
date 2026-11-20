@@ -57,10 +57,39 @@ baseline() { # baseline LABEL: no Error findings on any lab VM
 	done
 }
 
-ovs_port_of() { # OVS port of a VM's VLAN 200 attachment
-	local uid
+ovs_port_of() { # OVS port of a VM's secondary attachment
+	# OVS CNI stores its external_ids on the Port record. Match by pod UID,
+	# or by pod interface name for OVS CNI versions without contPodUid.
+	local uid iface port
 	uid="$(kubectl -n "$NS" get pod -l "vm.kubevirt.io/name=$1" -o jsonpath='{.items[0].metadata.uid}')"
-	ovs-vsctl --no-heading --format=csv --columns=name find interface "external_ids:contPodUid=$uid" 2>/dev/null | head -1 | tr -d '"'
+	port="$(ovs-vsctl --no-heading --format=csv --columns=name find port "external_ids:contPodUid=$uid" 2>/dev/null | head -1 | tr -d '"')"
+	if [ -z "$port" ]; then
+		iface="$(kubectl -n "$NS" get vmi "$1" -o jsonpath='{.status.interfaces[1].podInterfaceName}')"
+		port="$(ovs-vsctl --no-heading --format=csv --columns=name find port "external_ids:contIface=$iface" 2>/dev/null | head -1 | tr -d '"')"
+	fi
+	echo "$port"
+}
+
+operstate() { ip -j link show dev "$1" | jq -r '.[0].operstate'; }
+
+wait_up() { # wait_up DEV: wait until the kernel reports DEV up; log how long it took
+	local i
+	for i in $(seq 1 60); do
+		if [ "$(operstate "$1")" = UP ]; then log "  info  $1 operstate UP after ${i}s"; return 0; fi
+		sleep 1
+	done
+	log "  info  $1 still $(operstate "$1") after 60s (kernel view)"
+}
+
+# netdoctor must report what the kernel reports at collection time.
+consistent() { # consistent NAME DEV SNAPSHOT KERNEL_STATE
+	local seen
+	seen="$(jq -r --arg d "$2" '.interfaces[] | select(.name == $d) | .operState // .operstate // empty' "$3" 2>/dev/null | head -1)"
+	if [ -n "$seen" ] && [ "$seen" != "$4" ]; then
+		fail "$1: snapshot says $2 is $seen but the kernel said $4 just before collection"
+	else
+		pass "$1: snapshot state of $2 matches the kernel ($4)"
+	fi
 }
 
 scenario_baseline() {
@@ -123,15 +152,38 @@ scenario_ovs_tag() {
 scenario_bridge_down() {
 	log "F. host bridge br1 down"
 	ip link set br1 down
-	diag bridge-down vm-bridge --host-snapshot "$(snapshot bridge-down)" && expect bridge-down HOST_INTERFACE_DOWN
+	local k snap
+	k="$(operstate br1)"
+	snap="$(snapshot bridge-down)"
+	consistent bridge-down br1 "$snap" "$k"
+	diag bridge-down vm-bridge --host-snapshot "$snap" && expect bridge-down HOST_INTERFACE_DOWN
 	ip link set br1 up
+	wait_up br1
+	k="$(operstate br1)"
+	snap="$(snapshot bridge-up)"
+	consistent bridge-up br1 "$snap" "$k"
 }
 
 scenario_bond_member() {
-	log "G. bond member veth-a2 detached"
+	log "G1. bond member veth-a2 link down (still enslaved)"
+	ip link set veth-a2 down
+	diag bond-down vm-bridge --host-snapshot "$(snapshot bond-down)" && expect bond-down BOND_MEMBER_DETACHED
+	ip link set veth-a2 up
+
+	log "G2. bond member veth-a2 removed from the bond (detectable only with declared members)"
 	ip link set veth-a2 nomaster
-	diag bond-member vm-bridge --host-snapshot "$(snapshot bond-member)" && expect bond-member BOND_MEMBER_DETACHED
+	local snap
+	snap="$(snapshot bond-removed)"
+	diag bond-removed-noexp vm-bridge --host-snapshot "$snap"
+	if has bond-removed-noexp BOND_MEMBER_DETACHED; then
+		fail "bond-removed-noexp: netdoctor reported a missing member without declared members (it must not guess)"
+	else
+		pass "bond-removed-noexp: no guess about bond membership without expectations"
+	fi
+	printf 'bonds:\n  bond0:\n    members: [veth-a1, veth-a2]\n' >"$OUT/expect-bond.yaml"
+	diag bond-removed vm-bridge --host-snapshot "$snap" --expectations "$OUT/expect-bond.yaml" && expect bond-removed BOND_MEMBER_DETACHED
 	ip link set veth-a2 down; ip link set veth-a2 master bond0; ip link set veth-a2 up
+	wait_up bond0
 }
 
 scenario_mtu() {
@@ -201,6 +253,7 @@ run() {
 	filtering) scenario_vlan_filtering_off; baseline after-filtering ;;
 	ovs) scenario_ovs_tag; baseline after-ovs ;;
 	bridge) scenario_bridge_down; baseline after-bridge ;;
+	ovsport) echo "vm-ovs port: $(ovs_port_of vm-ovs)" ;;
 	bond) scenario_bond_member; baseline after-bond ;;
 	mtu) scenario_mtu ;;
 	trace) scenario_trace; baseline after-trace ;;
