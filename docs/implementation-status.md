@@ -48,7 +48,8 @@ reason).
 
 | Feature | Status | Evidence |
 | --- | --- | --- |
-| `--fail-on none|info|warning|error` on inspect/diagnose; exit 0 ok, 1 command error, 2 findings at threshold (report still written) | Done | `TestFailOnCLI`, `TestCheckFailOn` |
+| `--fail-on none|info|warning|error` on inspect/diagnose/report; exit 0 ok, 1 command error, 2 findings at threshold (report still written) | Done | `TestFailOnCLI`, `TestCheckFailOn` |
+| `report vm/x [-o json] [--bundle F.tar.gz] [--redact]`: diagnosis, topology (JSON/text/DOT/Mermaid), capabilities, inputs, SHA-256 manifest; deterministic archive; consistent IP/MAC redaction (names are not redacted) | Done | `TestReportBundleRedacted`, `TestReportJSON`, `internal/bundle` tests |
 
 ## Agent extensibility (design only)
 
@@ -63,7 +64,6 @@ reason).
 | Feature | Notes |
 | --- | --- |
 | UDP/DNS, conntrack/routing, QEMU/vhost, OVS datapath hooks | Next eBPF hook groups |
-| `report` bundle | |
 | Opt-in connectivity `probe` | Must be explicit and labeled with its origin |
 | OVN-Kubernetes / Kube-OVN adapters | Design in PR #7 |
 | Docs: architecture, eBPF internals, CLI reference, security model | |

@@ -12,6 +12,8 @@ import (
 	"github.com/sudharsanomprakash/kubevirt-netdoctor/internal/diagnose"
 	"github.com/sudharsanomprakash/kubevirt-netdoctor/internal/ebpf"
 	"github.com/sudharsanomprakash/kubevirt-netdoctor/internal/expect"
+	"github.com/sudharsanomprakash/kubevirt-netdoctor/internal/host"
+	"github.com/sudharsanomprakash/kubevirt-netdoctor/internal/hostpath"
 	"github.com/sudharsanomprakash/kubevirt-netdoctor/internal/output"
 	"github.com/sudharsanomprakash/kubevirt-netdoctor/internal/route"
 	"github.com/sudharsanomprakash/kubevirt-netdoctor/internal/traceplan"
@@ -57,38 +59,57 @@ routing table. The guest's own routing table is not observable.`,
 }
 
 func (o *diagnoseOptions) run(ctx context.Context, args []string) error {
+	ctx, cancel := o.withTimeout(ctx)
+	defer cancel()
+	d, err := o.diagnose(ctx, args)
+	if err != nil {
+		return err
+	}
+	if err := output.Write(o.streams.Out, o.output, d.report); err != nil {
+		return err
+	}
+	return checkFailOn(o.failOn, d.report.Findings)
+}
+
+// diagnosis is the result of the full diagnose pipeline.
+type diagnosis struct {
+	report *output.Report
+	snap   *host.Snapshot
+	hp     *hostpath.Result
+}
+
+// diagnose loads the optional inputs, discovers the VM and evaluates every
+// rule. Callers bound ctx with withTimeout.
+func (o *diagnoseOptions) diagnose(ctx context.Context, args []string) (*diagnosis, error) {
 	var dest netip.Addr
 	if o.destination != "" {
 		var err error
 		if dest, err = netip.ParseAddr(o.destination); err != nil {
-			return fmt.Errorf("invalid --destination %q: expected an IP address", o.destination)
+			return nil, fmt.Errorf("invalid --destination %q: expected an IP address", o.destination)
 		}
 	}
 	var exp *expect.Spec
 	if o.expectations != "" {
 		var err error
 		if exp, err = expect.Load(o.expectations); err != nil {
-			return err
+			return nil, err
 		}
 	}
-
 	var tr *ebpf.Trace
 	if o.trace != "" {
 		var err error
 		if tr, err = traceplan.LoadTrace(o.trace); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
-	ctx, cancel := o.withTimeout(ctx)
-	defer cancel()
 	topo, err := o.discover(ctx, args)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	snap, hp, err := loadHost(o.hostSnapshot, topo)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	var ra *route.Analysis
 	if dest.IsValid() {
@@ -101,8 +122,5 @@ func (o *diagnoseOptions) run(ctx context.Context, args []string) error {
 		used, _ := diagnose.TraceMatches(in)
 		r.SetTrace(tr, used)
 	}
-	if err := output.Write(o.streams.Out, o.output, r); err != nil {
-		return err
-	}
-	return checkFailOn(o.failOn, findings)
+	return &diagnosis{report: r, snap: snap, hp: hp}, nil
 }
