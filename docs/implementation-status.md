@@ -42,7 +42,61 @@ reason).
 | `capabilities` (cluster) and `host capabilities` (node, verifier load) | Done | golden `capabilities.txt`, `TestCapabilitiesDegraded`, real verifier load on 6.18 |
 | `topology -o dot|mermaid` | Done | goldens validated with Graphviz and the Mermaid parser |
 | CI: BPF -Werror compile, bindings drift, real-kernel tests as root | Done (local) / pending first CI run | PR #9 |
-| Live validation against a KubeVirt virt-launcher pod | Blocked | No KubeVirt cluster here; needs the owner's cluster |
+| Live validation against a KubeVirt virt-launcher pod | Done | Lab run 2026-11-20 (see "Live lab validation") |
+
+## Live lab validation
+
+The lab is in `hack/lab` on branch `test/kubevirt-lab`. It ran on a GCE n2-standard-8 with nested virtualization:
+
+| Component | Version |
+| --- | --- |
+| Kubernetes | v1.33.13 (kubeadm) |
+| KubeVirt | v1.10.0 |
+| cluster-network-addons | v0.104.0-rc-0 (Multus, Linux bridge CNI, OVS CNI) |
+| containerd | 2.x |
+| Kernel | 7.0.0-1017-gcp |
+
+Lab topology:
+
+- three CirrOS VMs: masquerade, Linux bridge VLAN 100, OVS VLAN 200;
+- app pods on both VLANs;
+- a bonded VLAN trunk and a simulated upstream switch.
+
+**Result: 43 passed, 0 failed.**
+
+| Scenario | Result |
+| --- | --- |
+| Healthy baseline (3 VMs) | No Error findings; `GUEST_IP_UNAVAILABLE` is correct, because CirrOS has no guest agent |
+| `capabilities`, `host capabilities` | Pass; tracing Available (verifier load) |
+| `topology -o dot`, `-o mermaid` | Pass |
+| Missing NAD | `NAD_NOT_FOUND` |
+| Uplink no longer carries VLAN 100 | `VLAN_MISMATCH` |
+| VLAN filtering off | `VLAN_NOT_ENFORCED` |
+| OVS port re-tagged | `VLAN_MISMATCH` |
+| Bridge down | `HOST_INTERFACE_DOWN`; the snapshot state matched the kernel both down and up |
+| Bond member link down | `BOND_MEMBER_DETACHED` (this needed the fix described below) |
+| Bond member removed | No guess without declared members; `BOND_MEMBER_DETACHED` with expectations |
+| MTU expectation | `MTU_MISMATCH` |
+| Report bundle with `--redact` | Written; no VM addresses left |
+| Every fault reverted | Baseline clean again |
+
+Kernel trace of a live virt-launcher pod (scenario I):
+
+- The launcher network namespace was found from the kubelet pod cgroup.
+- Packets were counted on KubeVirt's interfaces: `tap…`, `k6t-…` and `…-nic`.
+- All 7 hooks attached.
+- Drops were attributed DirectlyAttributed.
+- `diagnose --trace` reported `TRACE_DROPS`.
+- Measured overhead: about 22k program runs, about 480 ns per run, 0.053% of one core.
+
+Bugs and gaps found by the lab:
+
+- **netdoctor bug, fixed in commit 119b670.** A bond member whose own link is down was not reported, because only the bond driver's MII status was checked. That status lags by up to miimon, and never changes with miimon=0.
+- **Lab setup fixes, now in the scripts:**
+  - KubeVirt's CRD needs server-side apply.
+  - KubeVirt v1.10 container disks need containerd 2.1 or newer.
+  - On Kubernetes 1.33 they also need the `ImageVolume` feature gate.
+- **Open: scenario J is informational and recorded no drops.** Its traffic (app pod to gateway) does not involve the VM, so the VM's filter correctly excluded it. A VM-originated fault trace is still to be added.
 
 ## CLI contract
 
