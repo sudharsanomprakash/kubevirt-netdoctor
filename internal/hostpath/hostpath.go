@@ -303,6 +303,14 @@ func linuxBond(b *host.Interface, snap *host.Snapshot) *Bond {
 		bm := BondMember{Name: m.Name, MTU: &mtu}
 		if m.BondMember != nil {
 			bm.PartnerID = m.BondMember.PartnerMAC
+		}
+		switch {
+		// The member's own link state is authoritative. The bond driver's
+		// MII status lags by up to miimon and never changes when MII
+		// monitoring is off (miimon=0, ARP monitoring).
+		case m.IsDown():
+			bm.Detached, bm.Reason = true, fmt.Sprintf("link down (admin up: %v, operstate: %s)", m.AdminUp, m.OperState)
+		case m.BondMember != nil:
 			switch {
 			case !strings.EqualFold(m.BondMember.MIIStatus, "up"):
 				bm.Detached, bm.Reason = true, "MII status "+m.BondMember.MIIStatus

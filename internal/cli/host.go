@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"time"
@@ -8,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
+	"github.com/sudharsanomprakash/kubevirt-netdoctor/internal/ebpf"
 	"github.com/sudharsanomprakash/kubevirt-netdoctor/internal/host"
 	"github.com/sudharsanomprakash/kubevirt-netdoctor/internal/output"
 )
@@ -17,11 +19,30 @@ type HostEnv struct {
 	Runner   host.Runner
 	ProcRoot string
 	Hostname func() (string, error)
+	Tracer   TracerEnv
+	// Probe checks node capabilities; load runs the verifier.
+	Probe func(load bool) ebpf.NodeCapabilities
+}
+
+// TracerEnv is the kernel tracer and the node lookups it needs.
+type TracerEnv struct {
+	Run              func(context.Context, ebpf.Options, ebpf.Meta) (*ebpf.Trace, error)
+	FindPodNetns     func(podUID string) (*ebpf.PodNetns, error)
+	ListInterfaces   func(nsPath string) ([]ebpf.InterfaceFilter, error)
+	ResolveInterface func(nsPath, name string) (ebpf.InterfaceFilter, error)
 }
 
 // DefaultHostEnv runs real commands against the local host.
 func DefaultHostEnv() HostEnv {
-	return HostEnv{Runner: host.ExecRunner{}, ProcRoot: "/", Hostname: os.Hostname}
+	return HostEnv{
+		Runner: host.ExecRunner{}, ProcRoot: "/", Hostname: os.Hostname, Probe: ebpf.ProbeCapabilities,
+		Tracer: TracerEnv{
+			Run:              ebpf.Run,
+			FindPodNetns:     func(uid string) (*ebpf.PodNetns, error) { return ebpf.FindPodNetns("/proc", uid) },
+			ListInterfaces:   ebpf.ListInterfaces,
+			ResolveInterface: ebpf.ResolveInterface,
+		},
+	}
 }
 
 func newHostCommand(streams genericiooptions.IOStreams, env HostEnv) *cobra.Command {
@@ -29,7 +50,7 @@ func newHostCommand(streams genericiooptions.IOStreams, env HostEnv) *cobra.Comm
 		Use:   "host",
 		Short: "Host network inspection (experimental)",
 	}
-	cmd.AddCommand(newHostCollectCommand(streams, env))
+	cmd.AddCommand(newHostCollectCommand(streams, env), newHostTraceCommand(streams, env), newHostCapabilitiesCommand(streams, env))
 	return cmd
 }
 

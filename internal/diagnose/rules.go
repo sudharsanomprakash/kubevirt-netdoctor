@@ -38,6 +38,7 @@ func AllRules() []Rule {
 	rules := DefaultRules()
 	rules = append(rules, HostRules()...)
 	rules = append(rules, RouteRules()...)
+	rules = append(rules, TraceRules()...)
 	return append(rules, TopologyRules()...)
 }
 

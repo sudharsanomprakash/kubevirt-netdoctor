@@ -15,7 +15,8 @@ what to check next.
 
 > **Status: early development (v0.x).** The CLI and the JSON schema may change between
 > minor versions. Features marked **experimental** may change more. netdoctor never sends
-> traffic: connectivity is not tested by any command.
+> traffic: connectivity is not tested by any command. The optional kernel tracer observes
+> traffic that already flows; it never modifies or generates packets.
 
 > **Disclaimer:** kubevirt-netdoctor is an independent community project. It is not
 > affiliated with, sponsored by or endorsed by Red Hat, the Cloud Native Computing
@@ -48,7 +49,8 @@ level only, is listed in the [CNI support matrix](docs/cni-support.md).
 | NAD CNI configuration: plugin chain, bridge, VLAN, trunks, MTU, IPAM subnets/gateways/routes | Kubernetes API | all |
 | Host interfaces, Linux bridges and their VLAN tables, VLAN sub-interfaces, bonds, routes | host snapshot *(experimental)* | `topology`, `diagnose` |
 | OVS bridges, ports (tags, trunks, external IDs), interfaces, bonds, LACP, flow summaries | host snapshot *(experimental)* | `topology`, `diagnose` |
-| Guest OS routes and firewall, pod network namespace, physical switch | **not observed** | |
+| Kernel drops (with drop reason), TCP retransmissions, resets and state changes, per-interface packet counts, attributed to the VM | eBPF trace on the node *(experimental, opt-in, root)* | `trace`, `host trace`, `diagnose --trace` |
+| Guest OS routes and firewall, physical switch | **not observed** | |
 | Packet forwarding / connectivity | **not tested** | |
 
 ```mermaid
@@ -86,7 +88,11 @@ flowchart TB
     CLI --> EXP["internal/expect<br/>user expectations"]
     CLI --> GRAPH["internal/graph<br/>nodes + edges with provenance"]
     CLI --> DIAG["internal/diagnose<br/>findings engine + rules"]
-    CLI --> OUT["internal/output<br/>text / JSON"]
+    CLI --> OUT["internal/output<br/>text / JSON / DOT / Mermaid"]
+    CLI --> EBPF["internal/ebpf<br/>CO-RE tracer, node side"]
+    CLI --> TP["internal/traceplan<br/>plans + attribution"]
+    CLI --> CAP["internal/capability<br/>discovery + access review"]
+    CLI --> BUNDLE["internal/bundle<br/>report archives, redaction"]
 ```
 
 Every relationship carries a provenance:
@@ -130,6 +136,19 @@ kubectl netdoctor diagnose vm/db-03 -n demo --host-snapshot worker-2.json --expe
 # On the VM's node (experimental, see "Host collector security model")
 kubectl-netdoctor host collect --node-name worker-2 --file /tmp/worker-2.json
 
+# Kernel evidence (experimental): plan, trace on the node as root, then diagnose
+kubectl netdoctor trace vm/db-03 -n demo --duration 60s -f plan.json
+kubectl-netdoctor host trace --plan plan.json -f trace.json      # on the node
+kubectl netdoctor diagnose vm/db-03 -n demo --trace trace.json
+
+# What can I see? (cluster RBAC/APIs; node kernel and privileges)
+kubectl netdoctor capabilities -n demo
+kubectl-netdoctor host capabilities                               # on the node
+
+# Graph exports and a shareable, optionally redacted bundle
+kubectl netdoctor topology vm/db-03 -n demo -o dot | dot -Tsvg > db-03.svg
+kubectl netdoctor report vm/db-03 -n demo --bundle db-03.tar.gz --redact
+
 kubectl netdoctor version
 ```
 
@@ -138,8 +157,10 @@ All cluster commands accept the standard kubectl flags (`--kubeconfig`, `--conte
 whole command; individual API requests are also bounded). Ctrl-C cancels in-flight
 requests. `kubectl netdoctor version` reports the git commit the binary was built from
 (from `-ldflags`, or the VCS information Go embeds when building from a checkout).
-Exit status is `0` when the command completed, regardless of findings, and
-`1` when it could not run.
+Exit status is `0` when the command completed and `1` when it could not run. With
+`--fail-on info|warning|error` (inspect, diagnose, report), it is `2` when the report was
+written and a finding reached that severity. See [`docs/cli.md`](docs/cli.md) for every
+command and flag, and [`docs/ebpf.md`](docs/ebpf.md) for the kernel tracer.
 
 ### Example: topology
 
@@ -285,8 +306,9 @@ The cluster commands only read:
 | `""` (core) | `pods` | `list` | virt-launcher pod discovery and Multus annotations |
 | `k8s.cni.cncf.io` | `network-attachment-definitions` | `get` | NAD CNI configuration |
 
-`topology` and `diagnose` need nothing beyond `inspect`; a host snapshot is a local
-file. API discovery uses the default `system:discovery` permissions. NADs referenced as
+`topology`, `diagnose`, `trace` and `report` need nothing beyond `inspect`; host
+snapshots and traces are local files. `capabilities` uses SelfSubjectAccessReviews, which
+every authenticated user may create by default. API discovery uses the default `system:discovery` permissions. NADs referenced as
 `<namespace>/<name>` need `get` in that namespace. See
 [`examples/rbac.yaml`](examples/rbac.yaml). Missing permissions produce `ACCESS_DENIED`
 findings and partial results instead of failures.
@@ -336,6 +358,23 @@ with `--hostname-override`); such snapshots are flagged with
 `HOST_SNAPSHOT_HOSTNAME_MISMATCH`. Snapshots whose node does not match the VMI's node are
 not correlated (`HOST_SNAPSHOT_NODE_MISMATCH`).
 
+## Kernel tracer security model (experimental)
+
+`kubectl-netdoctor host trace` is the only part of netdoctor that loads code into the
+kernel. Details are in [`docs/ebpf.md`](docs/ebpf.md).
+
+- **Opt-in and operator-run**, like `host collect`. It needs root, or CAP_BPF and
+  CAP_PERFMON. `host capabilities` shows what this node supports before you run it.
+- **Passive hooks only** (`tp_btf` tracepoints). No XDP, TC or socket programs, so no
+  packet can be changed, dropped, redirected or sent.
+- **Bounded**: at most 10 minutes, a fixed-size ring buffer, and a cap on stored events.
+  Lost and suppressed events are counted, and programs are detached on exit or Ctrl-C.
+- **Filtered in the kernel** to the VM's launcher pod interfaces and addresses.
+  Node-wide tracing requires `--unfiltered`.
+- **Measured**: each trace records the CPU time its BPF programs used.
+- **Output**: the trace file (mode `0600`) contains addresses and ports of observed
+  flows. Treat it as sensitive; `report --redact` can mask addresses when sharing.
+
 ## Troubleshooting
 
 | Symptom | Meaning and next step |
@@ -352,7 +391,12 @@ not correlated (`HOST_SNAPSHOT_NODE_MISMATCH`).
 
 ## Limitations
 
-- No packet probes, captures or OpenFlow tracing; nothing proves forwarding.
+- No packet probes, captures or OpenFlow tracing; nothing proves forwarding. The
+  kernel tracer reports drops and TCP events it observed during its window; the absence
+  of events is not proof of connectivity. TCP retransmissions and resets are seen only
+  for connections the host kernel terminates (pods), not for a VM's guest TCP stack.
+- The kernel tracer has been validated on real kernels with simulated launcher pods, not
+  yet against a live KubeVirt virt-launcher pod.
 - Pod and guest network namespaces are not entered. The host veth of a Linux bridge
   attachment therefore cannot be tied to a specific pod. OVS CNI ports can, exactly
   when OVS CNI records the pod UID in `external_ids`; with older OVS CNI versions the
@@ -387,6 +431,13 @@ Planned, not implemented:
 
 See [`docs/gap-analysis.md`](docs/gap-analysis.md) for how this compares with
 existing tools.
+
+## Future: agents
+
+Optional diagnostic and remediation agents are planned but not implemented. The
+constraints they must follow (read-only engine, separate enable and authorize controls,
+typed actions, policy, approval and audit) are in
+[`docs/architecture-agents.md`](docs/architecture-agents.md).
 
 ## Contributing
 

@@ -9,7 +9,7 @@ LDFLAGS := -s -w \
 	-X $(PKG)/internal/version.Date=$(DATE)
 PLATFORMS := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64
 
-.PHONY: all build test race vet fmt lint golden integration dist clean
+.PHONY: all build test race vet fmt fmt-check lint verify golden integration bpf-generate bpf-check bpf-test dist clean
 
 all: fmt vet lint test build
 
@@ -30,6 +30,20 @@ fmt:
 
 lint: ## Requires golangci-lint v2
 	golangci-lint run ./...
+
+fmt-check:
+	@test -z "$$(gofmt -s -l .)" || { gofmt -s -l .; echo "files need gofmt -s"; exit 1; }
+
+verify: fmt-check vet lint race ## Every gate a change must pass before it is pushed
+
+bpf-generate: ## Recompile bpf/*.c and regenerate the Go bindings (needs clang)
+	go generate ./internal/ebpf
+
+bpf-check: ## Compile the BPF sources with -Werror without touching the committed objects
+	clang -O2 -g -Wall -Werror -target bpf -I bpf -c bpf/netdoctor.bpf.c -o /dev/null
+
+bpf-test: ## Load the tracer into the running kernel and trace real traffic in network namespaces (root)
+	go test -count=1 -v -run 'Trace' ./internal/ebpf ./internal/cli
 
 integration: ## Host collector test against real iproute2 in a disposable netns (root)
 	./hack/integration-netns.sh

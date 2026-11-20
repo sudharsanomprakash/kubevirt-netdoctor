@@ -17,7 +17,8 @@ type topologyOptions struct {
 }
 
 func newTopologyCommand(streams genericiooptions.IOStreams, configFlags *genericclioptions.ConfigFlags, newClients ClientFactory) *cobra.Command {
-	o := &topologyOptions{clusterOptions: clusterOptions{streams: streams, configFlags: configFlags, newClients: newClients}}
+	o := &topologyOptions{clusterOptions: clusterOptions{streams: streams, configFlags: configFlags, newClients: newClients,
+		formats: []string{output.FormatText, output.FormatJSON, output.FormatDOT, output.FormatMermaid}}}
 	cmd := &cobra.Command{
 		Use:   "topology (vm|vmi)/NAME",
 		Short: "Show the network topology of a VM as a graph of observed, declared and inferred relationships",
@@ -29,7 +30,9 @@ Every relationship is labeled Observed (reported by the API or the host),
 Declared (stated by configuration) or Inferred (derived), and layers that
 could not be observed are listed as gaps.`,
 		Example: `  kubectl netdoctor topology vm/web-01 -n demo
-  kubectl netdoctor topology vm/web-01 -n demo --host-snapshot worker-1.json -o json`,
+  kubectl netdoctor topology vm/web-01 -n demo --host-snapshot worker-1.json -o json
+  kubectl netdoctor topology vm/web-01 -n demo -o dot | dot -Tsvg > web-01.svg
+  kubectl netdoctor topology vm/web-01 -n demo -o mermaid > web-01.mmd`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return o.run(cmd.Context(), args)

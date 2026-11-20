@@ -16,8 +16,12 @@ func WriteTopology(w io.Writer, format string, r *TopologyReport) error {
 		return WriteJSON(w, r)
 	case FormatText, "":
 		return writeTopologyText(w, r)
+	case FormatDOT:
+		return graph.WriteDOT(w, r.Graph, topologyTitle(r, "solid: observed, dashed: declared, dotted: inferred"))
+	case FormatMermaid:
+		return graph.WriteMermaid(w, r.Graph, topologyTitle(r, "solid: observed, dotted: declared or inferred as labeled"))
 	default:
-		return fmt.Errorf("unsupported output format %q (use %q or %q)", format, FormatText, FormatJSON)
+		return fmt.Errorf("unsupported output format %q (use text, json, dot or mermaid)", format)
 	}
 }
 
@@ -119,4 +123,9 @@ func attrString(attrs map[string]string) string {
 		parts = append(parts, k+"="+attrs[k])
 	}
 	return " {" + strings.Join(parts, ", ") + "}"
+}
+
+func topologyTitle(r *TopologyReport, legend string) string {
+	t := r.Topology.Target
+	return fmt.Sprintf("%s %s/%s (%s)", t.Kind, t.Namespace, t.Name, legend)
 }
