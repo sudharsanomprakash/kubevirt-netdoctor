@@ -141,6 +141,38 @@ kubernetes() {
 	kubectl wait --for=condition=Ready node --all --timeout=300s
 }
 
+# imagevolume enables the ImageVolume feature gate, which KubeVirt uses to
+# mount container disks. It is beta and off by default before Kubernetes
+# 1.35, and on by default from 1.35 (where setting it is unnecessary).
+imagevolume() {
+	export KUBECONFIG=/etc/kubernetes/admin.conf
+	local minor
+	minor="$(kubectl version -o json | jq -r .serverVersion.minor | tr -dc 0-9)"
+	if [ "$minor" -ge 35 ]; then
+		echo "Kubernetes 1.$minor enables ImageVolume by default"
+		return 0
+	fi
+	LOG "enable the ImageVolume feature gate (Kubernetes 1.$minor)"
+	local apiserver=/etc/kubernetes/manifests/kube-apiserver.yaml
+	if ! grep -q 'ImageVolume=true' "$apiserver"; then
+		sed -i 's|^    - kube-apiserver$|    - kube-apiserver\n    - --feature-gates=ImageVolume=true|' "$apiserver"
+		grep -q 'ImageVolume=true' "$apiserver" || { echo "could not patch $apiserver" >&2; exit 1; }
+		echo "waiting for the API server to restart with the gate..."
+		sleep 20
+		for _ in $(seq 1 60); do kubectl get --raw /readyz >/dev/null 2>&1 && break; sleep 5; done
+	fi
+	local kubelet=/var/lib/kubelet/config.yaml
+	if ! grep -q 'ImageVolume: true' "$kubelet"; then
+		if grep -q '^featureGates:' "$kubelet"; then
+			sed -i 's|^featureGates:$|featureGates:\n  ImageVolume: true|' "$kubelet"
+		else
+			printf 'featureGates:\n  ImageVolume: true\n' >>"$kubelet"
+		fi
+		systemctl restart kubelet
+		kubectl wait --for=condition=Ready node --all --timeout=300s
+	fi
+}
+
 latest() { curl -fsSL "https://api.github.com/repos/$1/releases/latest" | jq -r .tag_name; }
 
 addons() {
@@ -195,8 +227,9 @@ need_root
 case "${1:-all}" in
 network) kernel; network ;;
 runtime) runtime ;;
+imagevolume) imagevolume ;;
 netdoctor) netdoctor ;;
-all) packages; kernel; network; runtime; kubernetes; addons; netdoctor
+all) packages; kernel; network; runtime; kubernetes; imagevolume; addons; netdoctor
 	LOG "done: run 'sudo hack/lab/workloads.sh' next" ;;
-*) echo "usage: $0 [all|network|runtime|netdoctor]" >&2; exit 2 ;;
+*) echo "usage: $0 [all|network|runtime|imagevolume|netdoctor]" >&2; exit 2 ;;
 esac
