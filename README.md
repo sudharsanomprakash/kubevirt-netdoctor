@@ -390,7 +390,8 @@ kernel. Details are in [`docs/ebpf.md`](docs/ebpf.md).
 
 - No packet probes, captures or OpenFlow tracing; nothing proves forwarding. The
   kernel tracer reports drops and TCP events it observed during its window; the absence
-  of events is not proof of connectivity.
+  of events is not proof of connectivity. TCP retransmissions and resets are seen only
+  for connections the host kernel terminates (pods), not for a VM's guest TCP stack.
 - The kernel tracer has been validated on real kernels with simulated launcher pods, not
   yet against a live KubeVirt virt-launcher pod.
 - Pod and guest network namespaces are not entered. The host veth of a Linux bridge

@@ -29,6 +29,13 @@ events, and how its cost and failure modes are bounded.
 | tcp | `sock:inet_sock_set_state` | `tcp_state` | 5-tuple, old and new state |
 | interfaces | `net:netif_receive_skb`, `net:net_dev_queue` | counters only | packets and bytes per interface and direction that match the filter |
 
+**TCP events and VMs.** The TCP hooks fire only for connections terminated by the host
+kernel: application pods, and processes inside the virt-launcher pod. A KubeVirt VM's TCP
+stack runs in the guest kernel. Its packets cross the host only through the tap, bridge or
+masquerade NAT path, so guest retransmissions and resets are not observed. For VM traffic
+the tracer reports host-path drops and per-interface packet counts. `TRACE_TCP_*`
+findings for a VM therefore come from host-side sockets only.
+
 `kfree_skb` calls whose reason is `SKB_NOT_DROPPED_YET` or `SKB_CONSUMED` are skipped,
 because they are normal frees rather than drops. The numeric values of these reasons
 differ between kernels; on 5.17–6.0, for example, value 1 is `NO_SOCKET`. The tracer
