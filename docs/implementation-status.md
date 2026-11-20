@@ -44,6 +44,12 @@ reason).
 | CI: BPF -Werror compile, bindings drift, real-kernel tests as root | Done (local) / pending first CI run | PR #9 |
 | Live validation against a KubeVirt virt-launcher pod | Blocked | No KubeVirt cluster here; needs the owner's cluster |
 
+## CLI contract
+
+| Feature | Status | Evidence |
+| --- | --- | --- |
+| `--fail-on none|info|warning|error` on inspect/diagnose; exit 0 ok, 1 command error, 2 findings at threshold (report still written) | Done | `TestFailOnCLI`, `TestCheckFailOn` |
+
 ## Agent extensibility (design only)
 
 | Item | Status | Evidence |
@@ -57,7 +63,7 @@ reason).
 | Feature | Notes |
 | --- | --- |
 | UDP/DNS, conntrack/routing, QEMU/vhost, OVS datapath hooks | Next eBPF hook groups |
-| `report` bundle and `--fail-on` exit codes | |
+| `report` bundle | |
 | Opt-in connectivity `probe` | Must be explicit and labeled with its origin |
 | OVN-Kubernetes / Kube-OVN adapters | Design in PR #7 |
 | Docs: architecture, eBPF internals, CLI reference, security model | |

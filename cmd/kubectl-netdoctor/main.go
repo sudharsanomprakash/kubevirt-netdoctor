@@ -25,9 +25,14 @@ func run() int {
 
 	streams := genericiooptions.IOStreams{In: os.Stdin, Out: os.Stdout, ErrOut: os.Stderr}
 	cmd := cli.NewRootCommand(streams, kube.NewClients)
-	if err := cmd.ExecuteContext(ctx); err != nil {
+	err := cmd.ExecuteContext(ctx)
+	code := cli.ExitCode(err)
+	switch code {
+	case cli.ExitOK:
+	case cli.ExitFindings:
+		fmt.Fprintln(os.Stderr, err) // the report itself was written
+	default:
 		fmt.Fprintln(os.Stderr, "Error:", err)
-		return 1
 	}
-	return 0
+	return code
 }

@@ -39,7 +39,9 @@ Diagnose sends no traffic. Route analysis uses declared NAD IPAM subnets and
 routes, KubeVirt binding semantics and, with a host snapshot, the node's main
 routing table. The guest's own routing table is not observable.`,
 		Example: `  kubectl netdoctor diagnose vm/web-01 -n demo --destination 198.51.100.20
-  kubectl netdoctor diagnose vm/web-01 -n demo --host-snapshot worker-1.json --expectations expect.yaml -o json`,
+  kubectl netdoctor diagnose vm/web-01 -n demo --host-snapshot worker-1.json --expectations expect.yaml -o json
+  # In CI or scripts: exit 2 when any warning or error is found
+  kubectl netdoctor diagnose vm/web-01 -n demo --fail-on warning`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return o.run(cmd.Context(), args)
@@ -48,6 +50,7 @@ routing table. The guest's own routing table is not observable.`,
 	o.addFlags(cmd)
 	cmd.Flags().StringVar(&o.destination, "destination", "", "Destination IP address to analyze the route toward")
 	cmd.Flags().StringVar(&o.hostSnapshot, "host-snapshot", "", "Host snapshot file from 'kubectl netdoctor host collect' (experimental)")
+	addFailOnFlag(cmd, &o.failOn)
 	cmd.Flags().StringVar(&o.trace, "trace", "", "Kernel trace file from 'kubectl-netdoctor host trace --plan' (experimental)")
 	cmd.Flags().StringVar(&o.expectations, "expectations", "", "YAML file with expected VLANs, MTUs and LACP partners (see docs/findings.md)")
 	return cmd
@@ -98,5 +101,8 @@ func (o *diagnoseOptions) run(ctx context.Context, args []string) error {
 		used, _ := diagnose.TraceMatches(in)
 		r.SetTrace(tr, used)
 	}
-	return output.Write(o.streams.Out, o.output, r)
+	if err := output.Write(o.streams.Out, o.output, r); err != nil {
+		return err
+	}
+	return checkFailOn(o.failOn, findings)
 }

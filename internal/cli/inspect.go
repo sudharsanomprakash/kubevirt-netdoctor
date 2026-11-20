@@ -34,6 +34,7 @@ diagnostic findings. All access is read-only.`,
 		},
 	}
 	o.addFlags(cmd)
+	addFailOnFlag(cmd, &o.failOn)
 	return cmd
 }
 
@@ -45,7 +46,10 @@ func runInspect(ctx context.Context, o *clusterOptions, args []string) error {
 		return err
 	}
 	findings := diagnose.Evaluate(&diagnose.Input{Topology: topo}, diagnose.DefaultRules())
-	return output.Write(o.streams.Out, o.output, output.NewReport(version.Get().Version, topo, findings))
+	if err := output.Write(o.streams.Out, o.output, output.NewReport(version.Get().Version, topo, findings)); err != nil {
+		return err
+	}
+	return checkFailOn(o.failOn, findings)
 }
 
 // parseTarget accepts "vm/NAME", "vmi/NAME" or "vm NAME" (and the long

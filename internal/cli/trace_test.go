@@ -52,8 +52,8 @@ func TestTracePlanJSON(t *testing.T) {
 
 func TestTracePlanErrors(t *testing.T) {
 	clients := fakecluster.New(t, []string{fixture("stopped-invalid-nad.yaml")})
-	if _, err := run(t, clients, "trace", "vm/web-02", "-n", "demo"); err == nil {
-		t.Error("tracing a stopped VM must fail")
+	if _, err := run(t, clients, "trace", "vm/batch-04", "-n", "demo"); err == nil || !strings.Contains(err.Error(), "no running VirtualMachineInstance") {
+		t.Errorf("tracing a stopped VM: err = %v", err)
 	}
 	clients = fakecluster.New(t, []string{fixture("pod-network-only.yaml")})
 	for _, args := range [][]string{

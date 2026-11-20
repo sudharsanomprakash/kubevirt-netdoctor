@@ -28,6 +28,8 @@ type clusterOptions struct {
 	timeout     time.Duration
 	// formats overrides the accepted output formats (default text, json).
 	formats []string
+	// failOn is the --fail-on threshold (inspect and diagnose only).
+	failOn string
 }
 
 func (o *clusterOptions) addFlags(cmd *cobra.Command) {
@@ -40,6 +42,11 @@ func (o *clusterOptions) addFlags(cmd *cobra.Command) {
 }
 
 func (o *clusterOptions) validate() error {
+	if o.failOn != "" {
+		if err := validateFailOn(o.failOn); err != nil {
+			return err
+		}
+	}
 	if len(o.formats) > 0 {
 		for _, f := range o.formats {
 			if o.output == f {
