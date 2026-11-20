@@ -17,7 +17,7 @@ MACHINE="${LAB_MACHINE:-n2-standard-8}"
 DISK_GB="${LAB_DISK_GB:-100}"
 
 REPO="${LAB_REPO:-https://github.com/sudharsanomprakash/kubevirt-netdoctor}"
-BRANCH="${LAB_BRANCH:-test/kubevirt-lab}"
+BRANCH="${LAB_BRANCH:-main}"
 
 # Startup script for "auto": on first boot, clone the repository and run the
 # whole lab unattended; progress goes to /var/log/netdoctor-lab.log.

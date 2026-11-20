@@ -33,7 +33,7 @@ test runner deliberately breaks the lab network (and repairs it).
 From Cloud Shell, or any machine with `gcloud` signed in:
 
 ```sh
-git clone -b test/kubevirt-lab https://github.com/sudharsanomprakash/kubevirt-netdoctor
+git clone https://github.com/sudharsanomprakash/kubevirt-netdoctor
 cd kubevirt-netdoctor
 hack/lab/create-vm.sh auto        # creates the VM; it builds the lab and runs the tests by itself
 hack/lab/create-vm.sh results     # progress, or the summary when finished (about 30-45 minutes)
