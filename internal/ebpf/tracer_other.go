@@ -33,3 +33,8 @@ func FindPodNetns(string, string) (*PodNetns, error) { return nil, ErrUnsupporte
 
 // ListInterfaces is unsupported outside Linux.
 func ListInterfaces(string) ([]InterfaceFilter, error) { return nil, ErrUnsupported }
+
+// ProbeCapabilities reports that eBPF is unsupported outside Linux.
+func ProbeCapabilities(bool) NodeCapabilities {
+	return NodeCapabilities{Tracing: CapUnavailable, Checks: []Capability{{Name: "operating system", Status: CapUnavailable, Detail: ErrUnsupported.Error()}}}
+}

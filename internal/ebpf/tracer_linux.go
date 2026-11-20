@@ -69,9 +69,9 @@ func Run(ctx context.Context, opts Options, meta Meta) (*Trace, error) {
 	if err != nil {
 		return nil, fmt.Errorf("kernel BTF unavailable (need CONFIG_DEBUG_INFO_BTF): %w", err)
 	}
-	if err := rlimit.RemoveMemlock(); err != nil {
-		return nil, fmt.Errorf("raising the locked-memory limit: %w", err)
-	}
+	// Kernels since 5.11 account BPF memory to the cgroup and ignore
+	// RLIMIT_MEMLOCK; on older ones a failure here surfaces at load time.
+	_ = rlimit.RemoveMemlock()
 	spec, err := loadNetdoctor()
 	if err != nil {
 		return nil, fmt.Errorf("loading embedded BPF objects: %w", err)

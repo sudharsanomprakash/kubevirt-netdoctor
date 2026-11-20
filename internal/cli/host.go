@@ -20,6 +20,8 @@ type HostEnv struct {
 	ProcRoot string
 	Hostname func() (string, error)
 	Tracer   TracerEnv
+	// Probe checks node capabilities; load runs the verifier.
+	Probe func(load bool) ebpf.NodeCapabilities
 }
 
 // TracerEnv is the kernel tracer and the node lookups it needs.
@@ -33,7 +35,7 @@ type TracerEnv struct {
 // DefaultHostEnv runs real commands against the local host.
 func DefaultHostEnv() HostEnv {
 	return HostEnv{
-		Runner: host.ExecRunner{}, ProcRoot: "/", Hostname: os.Hostname,
+		Runner: host.ExecRunner{}, ProcRoot: "/", Hostname: os.Hostname, Probe: ebpf.ProbeCapabilities,
 		Tracer: TracerEnv{
 			Run:              ebpf.Run,
 			FindPodNetns:     func(uid string) (*ebpf.PodNetns, error) { return ebpf.FindPodNetns("/proc", uid) },
@@ -48,7 +50,7 @@ func newHostCommand(streams genericiooptions.IOStreams, env HostEnv) *cobra.Comm
 		Use:   "host",
 		Short: "Host network inspection (experimental)",
 	}
-	cmd.AddCommand(newHostCollectCommand(streams, env), newHostTraceCommand(streams, env))
+	cmd.AddCommand(newHostCollectCommand(streams, env), newHostTraceCommand(streams, env), newHostCapabilitiesCommand(streams, env))
 	return cmd
 }
 
