@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -25,14 +26,28 @@ type clusterOptions struct {
 	newClients  ClientFactory
 	output      string
 	timeout     time.Duration
+	// formats overrides the accepted output formats (default text, json).
+	formats []string
 }
 
 func (o *clusterOptions) addFlags(cmd *cobra.Command) {
-	cmd.Flags().StringVarP(&o.output, "output", "o", output.FormatText, "Output format: text or json")
+	help := "Output format: text or json"
+	if len(o.formats) > 0 {
+		help = "Output format: " + strings.Join(o.formats, ", ")
+	}
+	cmd.Flags().StringVarP(&o.output, "output", "o", output.FormatText, help)
 	cmd.Flags().DurationVar(&o.timeout, "timeout", defaultTimeout, "Maximum time for the whole command")
 }
 
 func (o *clusterOptions) validate() error {
+	if len(o.formats) > 0 {
+		for _, f := range o.formats {
+			if o.output == f {
+				return nil
+			}
+		}
+		return fmt.Errorf("unsupported output format %q (use %s)", o.output, strings.Join(o.formats, ", "))
+	}
 	if o.output != output.FormatText && o.output != output.FormatJSON {
 		return fmt.Errorf("unsupported output format %q (use %q or %q)", o.output, output.FormatText, output.FormatJSON)
 	}

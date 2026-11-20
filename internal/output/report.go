@@ -171,8 +171,10 @@ func NewTopologyReport(toolVersion string, topo *topology.Topology, snap *host.S
 
 // Formats.
 const (
-	FormatText = "text"
-	FormatJSON = "json"
+	FormatText    = "text"
+	FormatJSON    = "json"
+	FormatDOT     = "dot"
+	FormatMermaid = "mermaid"
 )
 
 // Write renders the report in the given format.

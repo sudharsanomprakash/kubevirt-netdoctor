@@ -288,6 +288,8 @@ func TestTopologyScenarios(t *testing.T) {
 		{"linux bridge topology", "bridge-vlan-running.yaml", "worker-1-linux-bridge.json", "topology-linux-bridge.txt", []string{"vm/web-01"}},
 		{"topology without host snapshot", "attachment-missing.yaml", "", "topology-no-host.txt", []string{"vmi/edge-05"}},
 		{"secondary-only VM keeps launcher cluster interface", "ovs-secondary-only.yaml", "", "topology-secondary-only.txt", []string{"vm/app-07", "-n", "apps"}},
+		{"ovs topology dot", "ovs-vlan-running.yaml", "worker-2-ovs.json", "topology-ovs.dot", []string{"vm/db-03", "-o", "dot"}},
+		{"ovs topology mermaid", "ovs-vlan-running.yaml", "worker-2-ovs.json", "topology-ovs.mmd", []string{"vm/db-03", "-o", "mermaid"}},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
