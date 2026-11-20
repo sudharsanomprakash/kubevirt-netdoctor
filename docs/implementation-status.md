@@ -44,6 +44,14 @@ reason).
 | CI: BPF -Werror compile, bindings drift, real-kernel tests as root | Done (local) / pending first CI run | PR #9 |
 | Live validation against a KubeVirt virt-launcher pod | Blocked | No KubeVirt cluster here; needs the owner's cluster |
 
+## Agent extensibility (design only)
+
+| Item | Status | Evidence |
+| --- | --- | --- |
+| Extension points for diagnostic/remediation agents documented | Done | `docs/architecture-agents.md` |
+| Engine read-only / no remediation dependency enforced | Done | `internal/archtest` (verified to fail on a planted write call) |
+| Agents, remediation actions, policy, approval, audit | Not started by decision | Deferred by the owner; no code exists |
+
 ## Not started
 
 | Feature | Notes |
