@@ -1,0 +1,82 @@
+# Lab VMs (CirrOS container disk, KubeVirt @KV@). Secondary addresses are set
+# by a user-data script because those networks have no IPAM.
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: vm-masq
+  namespace: lab
+spec:
+  runStrategy: Always
+  template:
+    spec:
+      domain:
+        devices:
+          disks: [{name: root, disk: {bus: virtio}}]
+          interfaces: [{name: default, masquerade: {}}]
+        resources: {requests: {memory: 256Mi}}
+      networks: [{name: default, pod: {}}]
+      volumes:
+        - name: root
+          containerDisk: {image: quay.io/kubevirt/cirros-container-disk-demo:@KV@}
+---
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: vm-bridge
+  namespace: lab
+spec:
+  runStrategy: Always
+  template:
+    spec:
+      domain:
+        devices:
+          disks:
+            - {name: root, disk: {bus: virtio}}
+            - {name: cloudinit, disk: {bus: virtio}}
+          interfaces:
+            - {name: default, masquerade: {}}
+            - {name: vlan100, bridge: {}}
+        resources: {requests: {memory: 256Mi}}
+      networks:
+        - {name: default, pod: {}}
+        - {name: vlan100, multus: {networkName: br-vlan100}}
+      volumes:
+        - name: root
+          containerDisk: {image: quay.io/kubevirt/cirros-container-disk-demo:@KV@}
+        - name: cloudinit
+          cloudInitNoCloud:
+            userData: |
+              #!/bin/sh
+              ip link set eth1 up
+              ip addr add 192.168.100.10/24 dev eth1
+---
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: vm-ovs
+  namespace: lab
+spec:
+  runStrategy: Always
+  template:
+    spec:
+      domain:
+        devices:
+          disks:
+            - {name: root, disk: {bus: virtio}}
+            - {name: cloudinit, disk: {bus: virtio}}
+          interfaces:
+            - {name: default, masquerade: {}}
+            - {name: vlan200, bridge: {}}
+        resources: {requests: {memory: 256Mi}}
+      networks:
+        - {name: default, pod: {}}
+        - {name: vlan200, multus: {networkName: ovs-vlan200}}
+      volumes:
+        - name: root
+          containerDisk: {image: quay.io/kubevirt/cirros-container-disk-demo:@KV@}
+        - name: cloudinit
+          cloudInitNoCloud:
+            userData: |
+              #!/bin/sh
+              ip link set eth1 up
+              ip addr add 192.168.200.10/24 dev eth1
