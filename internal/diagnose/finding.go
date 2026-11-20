@@ -10,6 +10,7 @@ package diagnose
 import (
 	"sort"
 
+	"github.com/sudharsanomprakash/kubevirt-netdoctor/internal/ebpf"
 	"github.com/sudharsanomprakash/kubevirt-netdoctor/internal/expect"
 	"github.com/sudharsanomprakash/kubevirt-netdoctor/internal/host"
 	"github.com/sudharsanomprakash/kubevirt-netdoctor/internal/hostpath"
@@ -79,6 +80,8 @@ type Input struct {
 	Host     *hostpath.Result
 	Expect   *expect.Spec
 	Route    *route.Analysis
+	// Trace is a kernel trace whose events carry attribution levels.
+	Trace *ebpf.Trace
 }
 
 // Rule inspects the topology and returns zero or more findings.

@@ -10,9 +10,11 @@ import (
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
 	"github.com/sudharsanomprakash/kubevirt-netdoctor/internal/diagnose"
+	"github.com/sudharsanomprakash/kubevirt-netdoctor/internal/ebpf"
 	"github.com/sudharsanomprakash/kubevirt-netdoctor/internal/expect"
 	"github.com/sudharsanomprakash/kubevirt-netdoctor/internal/output"
 	"github.com/sudharsanomprakash/kubevirt-netdoctor/internal/route"
+	"github.com/sudharsanomprakash/kubevirt-netdoctor/internal/traceplan"
 	"github.com/sudharsanomprakash/kubevirt-netdoctor/internal/version"
 )
 
@@ -21,6 +23,7 @@ type diagnoseOptions struct {
 	destination  string
 	hostSnapshot string
 	expectations string
+	trace        string
 }
 
 func newDiagnoseCommand(streams genericiooptions.IOStreams, configFlags *genericclioptions.ConfigFlags, newClients ClientFactory) *cobra.Command {
@@ -45,6 +48,7 @@ routing table. The guest's own routing table is not observable.`,
 	o.addFlags(cmd)
 	cmd.Flags().StringVar(&o.destination, "destination", "", "Destination IP address to analyze the route toward")
 	cmd.Flags().StringVar(&o.hostSnapshot, "host-snapshot", "", "Host snapshot file from 'kubectl netdoctor host collect' (experimental)")
+	cmd.Flags().StringVar(&o.trace, "trace", "", "Kernel trace file from 'kubectl-netdoctor host trace --plan' (experimental)")
 	cmd.Flags().StringVar(&o.expectations, "expectations", "", "YAML file with expected VLANs, MTUs and LACP partners (see docs/findings.md)")
 	return cmd
 }
@@ -65,6 +69,14 @@ func (o *diagnoseOptions) run(ctx context.Context, args []string) error {
 		}
 	}
 
+	var tr *ebpf.Trace
+	if o.trace != "" {
+		var err error
+		if tr, err = traceplan.LoadTrace(o.trace); err != nil {
+			return err
+		}
+	}
+
 	ctx, cancel := o.withTimeout(ctx)
 	defer cancel()
 	topo, err := o.discover(ctx, args)
@@ -79,7 +91,12 @@ func (o *diagnoseOptions) run(ctx context.Context, args []string) error {
 	if dest.IsValid() {
 		ra = route.Analyze(topo, dest, matchingSnapshot(snap, hp))
 	}
-	in := &diagnose.Input{Topology: topo, Snapshot: snap, Host: hp, Expect: exp, Route: ra}
+	in := &diagnose.Input{Topology: topo, Snapshot: snap, Host: hp, Expect: exp, Route: ra, Trace: tr}
 	findings := diagnose.Evaluate(in, diagnose.AllRules())
-	return output.Write(o.streams.Out, o.output, output.NewDiagnosisReport(version.Get().Version, topo, snap, hp, ra, findings))
+	r := output.NewDiagnosisReport(version.Get().Version, topo, snap, hp, ra, findings)
+	if tr != nil {
+		used, _ := diagnose.TraceMatches(in)
+		r.SetTrace(tr, used)
+	}
+	return output.Write(o.streams.Out, o.output, r)
 }

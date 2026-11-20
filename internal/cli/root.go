@@ -46,6 +46,7 @@ traffic: connectivity is not tested.`,
 		newInspectCommand(streams, configFlags, newClients),
 		newTopologyCommand(streams, configFlags, newClients),
 		newDiagnoseCommand(streams, configFlags, newClients),
+		newTraceCommand(streams, configFlags, newClients),
 		newHostCommand(streams, hostEnv),
 		newVersionCommand(streams),
 	)

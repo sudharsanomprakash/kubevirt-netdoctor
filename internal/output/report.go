@@ -7,11 +7,13 @@ import (
 	"io"
 
 	"github.com/sudharsanomprakash/kubevirt-netdoctor/internal/diagnose"
+	"github.com/sudharsanomprakash/kubevirt-netdoctor/internal/ebpf"
 	"github.com/sudharsanomprakash/kubevirt-netdoctor/internal/graph"
 	"github.com/sudharsanomprakash/kubevirt-netdoctor/internal/host"
 	"github.com/sudharsanomprakash/kubevirt-netdoctor/internal/hostpath"
 	"github.com/sudharsanomprakash/kubevirt-netdoctor/internal/route"
 	"github.com/sudharsanomprakash/kubevirt-netdoctor/internal/topology"
+	"github.com/sudharsanomprakash/kubevirt-netdoctor/internal/traceplan"
 )
 
 // SchemaVersion versions the JSON report. Breaking changes require a new
@@ -39,6 +41,7 @@ type Report struct {
 	HostSnapshot  *SnapshotInfo      `json:"hostSnapshot,omitempty"`
 	Host          *hostpath.Result   `json:"host,omitempty"`
 	Route         *route.Analysis    `json:"route,omitempty"`
+	Trace         *TraceInfo         `json:"trace,omitempty"`
 	Findings      []diagnose.Finding `json:"findings"`
 	Summary       Summary            `json:"summary"`
 }
@@ -48,6 +51,29 @@ type SnapshotInfo struct {
 	NodeName    string              `json:"nodeName"`
 	CollectedAt string              `json:"collectedAt,omitempty"`
 	Sources     []host.SourceStatus `json:"sources"`
+}
+
+// TraceInfo summarizes the kernel trace used by diagnose.
+type TraceInfo struct {
+	NodeName  string            `json:"nodeName"`
+	StartedAt string            `json:"startedAt"`
+	EndedAt   string            `json:"endedAt"`
+	Used      bool              `json:"used"`
+	Events    int               `json:"events"`
+	Summary   traceplan.Summary `json:"summary"`
+	Counters  ebpf.Counters     `json:"counters"`
+	Overhead  ebpf.Overhead     `json:"overhead"`
+}
+
+// SetTrace records the trace in the report and widens its scope.
+func (r *Report) SetTrace(tr *ebpf.Trace, used bool) {
+	r.Trace = &TraceInfo{
+		NodeName: tr.NodeName, StartedAt: tr.StartedAt, EndedAt: tr.EndedAt, Used: used,
+		Events: len(tr.Events), Summary: traceplan.Summarize(tr), Counters: tr.Counters, Overhead: tr.Overhead,
+	}
+	if used {
+		r.Summary.Scope += fmt.Sprintf(" A kernel trace of node %s from %s to %s was included; it shows kernel events in that window only.", tr.NodeName, tr.StartedAt, tr.EndedAt)
+	}
 }
 
 // NewSnapshotInfo summarizes a snapshot; nil in, nil out.

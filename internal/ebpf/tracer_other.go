@@ -20,3 +20,16 @@ func NetnsID(string) (uint32, error) { return 0, ErrUnsupported }
 func ResolveInterface(string, string) (InterfaceFilter, error) {
 	return InterfaceFilter{}, ErrUnsupported
 }
+
+// PodNetns is the network namespace of a pod found on this node.
+type PodNetns struct {
+	Path string
+	ID   uint32
+	PIDs int
+}
+
+// FindPodNetns is unsupported outside Linux.
+func FindPodNetns(string, string) (*PodNetns, error) { return nil, ErrUnsupported }
+
+// ListInterfaces is unsupported outside Linux.
+func ListInterfaces(string) ([]InterfaceFilter, error) { return nil, ErrUnsupported }

@@ -1,0 +1,12 @@
+Trace plan for VirtualMachine demo/web-04
+  node:          worker-3
+  launcher pod:  virt-launcher-web-04-7hq2x (uid 1a6d1f0e-0000-4000-8000-000000000003)
+  events:        drops,tcp,interfaces for 45s
+  address:       10.244.3.40 (default, pod)
+
+Save the plan with --file (or -o json) to use it on the node.
+
+On node worker-3, as root (netdoctor does not deploy anything):
+  kubectl-netdoctor host trace --plan PLAN.json --file trace.json
+Then:
+  kubectl netdoctor diagnose vm/web-04 -n demo --trace trace.json

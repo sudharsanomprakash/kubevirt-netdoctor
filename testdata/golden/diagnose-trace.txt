@@ -1,0 +1,32 @@
+Target:    VirtualMachine demo/web-04
+VM:        web-04  runStrategy=Always  status=Running
+VMI:       web-04  phase=Running  node=worker-3  guestAgent=Connected
+Launcher:  virt-launcher-web-04-7hq2x  phase=Running  node=worker-3
+
+NETWORKS (1)
+  default  [pod network, binding: masquerade]
+    guest:  iface enp1s0  mac 02:00:00:00:00:0d  ips 10.244.3.40  source domain, guest-agent
+    pod:    iface eth0  network k8s-pod-network  mac 0a:58:0a:f4:03:28  ips 10.244.3.40 (Multus network-status)
+
+KERNEL TRACE (node worker-3, 2026-01-01T00:00:00Z to 2026-01-01T00:00:30Z)
+  events:     2 recorded: 1 directly attributed, 1 correlated, 0 ambiguous, 0 unattributed
+  VM traffic: 1 drop(s), 1 retransmit(s), 0 reset(s) sent, 0 received
+
+FINDINGS (3): 0 error(s), 2 warning(s), 1 info
+  WARNING TRACE_DROPS [Confirmed] Trace node/worker-3 2026-01-01T00:00:00Z
+          The kernel dropped 1 packet(s) of the VM's traffic
+          - 1 packet drop(s) attributed to the VM during 2026-01-01T00:00:00Z to 2026-01-01T00:00:30Z on node worker-3
+          - reason NO_SOCKET: 1
+          - drop on eth0 reason=NO_SOCKET [DirectlyAttributed]
+          next: Check the drop reasons: NO_SOCKET means nothing listened on the destination port, NETFILTER_DROP a firewall rule, OTHERHOST/PKT_TOO_BIG addressing or MTU problems. Some drops are normal (port scans, closed ports)
+  WARNING TRACE_TCP_RETRANSMITS [Suspected] Trace node/worker-3 2026-01-01T00:00:00Z
+          1 TCP retransmission(s) on the VM's connections
+          - observed during 2026-01-01T00:00:00Z to 2026-01-01T00:00:30Z on node worker-3
+          - tcp_retransmit 10.244.3.40:0 -> 198.51.100.9:0 [Correlated]
+          next: Retransmissions mean segments or their ACKs were lost or delayed; look for drops, MTU mismatches or link problems on the path to the peers listed
+  INFO    TOPOLOGY_INCOMPLETE [Unavailable] VirtualMachineInstance demo/web-04
+          1 part(s) of the VM's network path could not be observed
+          - no host snapshot: host bridges, OVS ports, uplinks and bonds are not observed (see kubectl netdoctor host collect)
+          next: See kubectl netdoctor topology for the observed and inferred relationships.
+
+Connectivity: NOT TESTED. Read-only Kubernetes API inspection. Guest, node, OVS/bridge, host NIC and switch state were not observed. A kernel trace of node worker-3 from 2026-01-01T00:00:00Z to 2026-01-01T00:00:30Z was included; it shows kernel events in that window only.

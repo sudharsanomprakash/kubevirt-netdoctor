@@ -10,6 +10,7 @@ import (
 	"github.com/sudharsanomprakash/kubevirt-netdoctor/internal/kube"
 	"github.com/sudharsanomprakash/kubevirt-netdoctor/internal/route"
 	"github.com/sudharsanomprakash/kubevirt-netdoctor/internal/topology"
+	"github.com/sudharsanomprakash/kubevirt-netdoctor/internal/traceplan"
 )
 
 // WriteText renders the report for humans. Layers of each network are listed
@@ -62,6 +63,9 @@ func WriteText(w io.Writer, r *Report) error {
 	}
 	if r.Route != nil {
 		writeRoute(p, r.Route)
+	}
+	if r.Trace != nil {
+		writeTrace(p, r.Trace)
 	}
 
 	p.blank()
@@ -342,5 +346,29 @@ func writeRoute(p *printer, a *route.Analysis) {
 	}
 	for _, n := range a.Notes {
 		p.line("  note:      %s", n)
+	}
+}
+
+func writeTrace(p *printer, t *TraceInfo) {
+	p.blank()
+	p.line("KERNEL TRACE (node %s, %s to %s)", t.NodeName, t.StartedAt, t.EndedAt)
+	if !t.Used {
+		p.line("  not used: it does not belong to the VM's current virt-launcher pod")
+		return
+	}
+	s := t.Summary
+	p.line("  events:     %d recorded: %d directly attributed, %d correlated, %d ambiguous, %d unattributed",
+		t.Events, s.ByAttribution[traceplan.DirectlyAttributed], s.ByAttribution[traceplan.Correlated],
+		s.ByAttribution[traceplan.Ambiguous], s.ByAttribution[traceplan.Unattributed])
+	drops := 0
+	for _, n := range s.DropReasons {
+		drops += n
+	}
+	p.line("  VM traffic: %d drop(s), %d retransmit(s), %d reset(s) sent, %d received", drops, s.Retransmits, s.ResetsSent, s.ResetsRecv)
+	if t.Counters.LostEvents+t.Counters.SuppressedEvents > 0 {
+		p.line("  incomplete: %d lost, %d over the event limit (counts are lower bounds)", t.Counters.LostEvents, t.Counters.SuppressedEvents)
+	}
+	if t.Overhead.Measured {
+		p.line("  overhead:   %d BPF program runs, %.0f ns/run, %.4f%% of one CPU core", t.Overhead.TotalRuns, t.Overhead.AvgNsPerRun, t.Overhead.CPUPercentOne)
 	}
 }

@@ -125,13 +125,15 @@ type Trace struct {
 	EndedAt       string `json:"endedAt"`
 	// Target identifies what the filter was built for, when known (for
 	// example the VM from a trace plan).
-	Target   *Target           `json:"target,omitempty"`
-	Filter   Filter            `json:"filter"`
-	Programs []ProgramStatus   `json:"programs"`
-	Counters Counters          `json:"counters"`
-	Overhead Overhead          `json:"overhead"`
-	Ifaces   []InterfaceCounts `json:"interfaces"`
-	Events   []Event           `json:"events"`
+	Target *Target `json:"target,omitempty"`
+	// LauncherNetns is the network namespace ID of the target's pod.
+	LauncherNetns uint32            `json:"launcherNetns,omitempty"`
+	Filter        Filter            `json:"filter"`
+	Programs      []ProgramStatus   `json:"programs"`
+	Counters      Counters          `json:"counters"`
+	Overhead      Overhead          `json:"overhead"`
+	Ifaces        []InterfaceCounts `json:"interfaces"`
+	Events        []Event           `json:"events"`
 	// Limitations explain what this trace could not observe.
 	Limitations []string `json:"limitations"`
 }
@@ -221,6 +223,9 @@ type Event struct {
 	SRTTMicros uint32   `json:"srttMicros,omitempty"`
 	PID        uint32   `json:"pid,omitempty"`
 	MatchedBy  []string `json:"matchedBy"`
+	// Attribution says how strongly the event is tied to the target
+	// workload (see package traceplan). Empty when no target was given.
+	Attribution string `json:"attribution,omitempty"`
 }
 
 // tcpStates are the kernel's TCP state names (include/net/tcp_states.h).
