@@ -59,6 +59,13 @@ const volatile __u32 cfg_event_mask = 0;
 const volatile __u32 cfg_filter_ifindex = 0; /* 1: interface filter active */
 const volatile __u32 cfg_filter_addr = 0;    /* 1: address filter active */
 const volatile __u32 cfg_unfiltered = 0;     /* 1: explicit node-wide tracing */
+/*
+ * kfree_skb reasons that are not drops (SKB_NOT_DROPPED_YET, SKB_CONSUMED).
+ * Their values differ between kernels (on 5.17-6.0 value 1 is NO_SOCKET), so
+ * userspace resolves them from kernel BTF; ~0 means "absent".
+ */
+const volatile __u32 cfg_reason_not_dropped = ~0U;
+const volatile __u32 cfg_reason_consumed = ~0U;
 
 struct event {
 	__u64 ts_ns;
@@ -266,8 +273,7 @@ int BPF_PROG(on_kfree_skb, struct sk_buff *skb, void *location, unsigned int rea
 {
 	if (!(cfg_event_mask & MASK_DROPS))
 		return 0;
-	/* 0 = not dropped yet, 1 = consumed: not drops. */
-	if (reason <= 1)
+	if (reason == cfg_reason_not_dropped || reason == cfg_reason_consumed)
 		return 0;
 
 	struct event e = {};

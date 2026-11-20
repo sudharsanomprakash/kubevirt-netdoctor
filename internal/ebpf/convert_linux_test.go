@@ -5,6 +5,8 @@ package ebpf
 import (
 	"reflect"
 	"testing"
+
+	"github.com/cilium/ebpf/btf"
 )
 
 func TestMatchedBy(t *testing.T) {
@@ -42,5 +44,21 @@ func TestConvertEvent(t *testing.T) {
 	raw = netdoctorEvent{Type: evDrop, Reason: 77}
 	if e := c.event(&raw, clock{}); e.DropReason != "REASON_77" {
 		t.Errorf("unknown reason %q", e.DropReason)
+	}
+}
+
+func TestNonDropReasonsAcrossKernels(t *testing.T) {
+	// 5.17: no non-drop values; 1 is NO_SOCKET and must not be skipped.
+	old := &btf.Enum{Values: []btf.EnumValue{{Name: "SKB_DROP_REASON_NOT_SPECIFIED", Value: 0}, {Name: "SKB_DROP_REASON_NO_SOCKET", Value: 1}}}
+	if nd, c := nonDropReasonsFrom(old); nd != ^uint32(0) || c != ^uint32(0) {
+		t.Errorf("5.17 layout: skip %d/%d, want none", nd, c)
+	}
+	// 6.1+: NOT_DROPPED_YET=0, CONSUMED=1.
+	cur := &btf.Enum{Values: []btf.EnumValue{{Name: "SKB_NOT_DROPPED_YET", Value: 0}, {Name: "SKB_CONSUMED", Value: 1}, {Name: "SKB_DROP_REASON_NOT_SPECIFIED", Value: 2}}}
+	if nd, c := nonDropReasonsFrom(cur); nd != 0 || c != 1 {
+		t.Errorf("6.1 layout: skip %d/%d, want 0/1", nd, c)
+	}
+	if nd, c := nonDropReasons(nil); nd != ^uint32(0) || c != ^uint32(0) {
+		t.Error("no BTF must skip nothing")
 	}
 }

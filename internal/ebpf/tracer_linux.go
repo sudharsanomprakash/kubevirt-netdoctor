@@ -157,11 +157,14 @@ func Run(ctx context.Context, opts Options, meta Meta) (*Trace, error) {
 		}
 		return 0
 	}
+	notDropped, consumed := nonDropReasons(kspec)
 	for name, v := range map[string]uint32{
-		"cfg_event_mask":     mask,
-		"cfg_filter_ifindex": b2u(len(opts.Interfaces) > 0),
-		"cfg_filter_addr":    b2u(len(opts.Addresses) > 0),
-		"cfg_unfiltered":     b2u(opts.Unfiltered),
+		"cfg_reason_not_dropped": notDropped,
+		"cfg_reason_consumed":    consumed,
+		"cfg_event_mask":         mask,
+		"cfg_filter_ifindex":     b2u(len(opts.Interfaces) > 0),
+		"cfg_filter_addr":        b2u(len(opts.Addresses) > 0),
+		"cfg_unfiltered":         b2u(opts.Unfiltered),
 	} {
 		if err := set(name, v); err != nil {
 			return nil, err
@@ -534,6 +537,30 @@ func matchedBy(bits uint8) []string {
 		out = append(out, "unfiltered")
 	}
 	return out
+}
+
+// nonDropReasons returns the values of SKB_NOT_DROPPED_YET and SKB_CONSUMED
+// in this kernel's enum skb_drop_reason, or ^0 for each that does not exist
+// (before 6.0 every kfree_skb reason is a drop).
+func nonDropReasons(kspec *btf.Spec) (notDropped, consumed uint32) {
+	var en *btf.Enum
+	if kspec == nil || kspec.TypeByName("skb_drop_reason", &en) != nil {
+		return ^uint32(0), ^uint32(0)
+	}
+	return nonDropReasonsFrom(en)
+}
+
+func nonDropReasonsFrom(en *btf.Enum) (notDropped, consumed uint32) {
+	notDropped, consumed = ^uint32(0), ^uint32(0)
+	for _, v := range en.Values {
+		switch v.Name {
+		case "SKB_NOT_DROPPED_YET":
+			notDropped = uint32(v.Value) //nolint:gosec // small enum
+		case "SKB_CONSUMED":
+			consumed = uint32(v.Value) //nolint:gosec // small enum
+		}
+	}
+	return
 }
 
 // dropReasons reads enum skb_drop_reason from kernel BTF, so names match the

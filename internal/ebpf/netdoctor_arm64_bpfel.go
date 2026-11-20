@@ -79,6 +79,8 @@ const (
 	netdoctorVarCfgEventMask        = "cfg_event_mask"
 	netdoctorVarCfgFilterAddr       = "cfg_filter_addr"
 	netdoctorVarCfgFilterIfindex    = "cfg_filter_ifindex"
+	netdoctorVarCfgReasonConsumed   = "cfg_reason_consumed"
+	netdoctorVarCfgReasonNotDropped = "cfg_reason_not_dropped"
 	netdoctorVarCfgUnfiltered       = "cfg_unfiltered"
 	netdoctorVarUnusedEvent         = "unused_event"
 )
@@ -149,11 +151,13 @@ type netdoctorMapSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type netdoctorVariableSpecs struct {
-	CfgEventMask     *ebpf.VariableSpec `ebpf:"cfg_event_mask"`
-	CfgFilterAddr    *ebpf.VariableSpec `ebpf:"cfg_filter_addr"`
-	CfgFilterIfindex *ebpf.VariableSpec `ebpf:"cfg_filter_ifindex"`
-	CfgUnfiltered    *ebpf.VariableSpec `ebpf:"cfg_unfiltered"`
-	UnusedEvent      *ebpf.VariableSpec `ebpf:"unused_event"`
+	CfgEventMask        *ebpf.VariableSpec `ebpf:"cfg_event_mask"`
+	CfgFilterAddr       *ebpf.VariableSpec `ebpf:"cfg_filter_addr"`
+	CfgFilterIfindex    *ebpf.VariableSpec `ebpf:"cfg_filter_ifindex"`
+	CfgReasonConsumed   *ebpf.VariableSpec `ebpf:"cfg_reason_consumed"`
+	CfgReasonNotDropped *ebpf.VariableSpec `ebpf:"cfg_reason_not_dropped"`
+	CfgUnfiltered       *ebpf.VariableSpec `ebpf:"cfg_unfiltered"`
+	UnusedEvent         *ebpf.VariableSpec `ebpf:"unused_event"`
 }
 
 // netdoctorObjects contains all objects after they have been loaded into the kernel.
@@ -197,11 +201,13 @@ func (m *netdoctorMaps) Close() error {
 //
 // It can be passed to loadNetdoctorObjects or ebpf.CollectionSpec.LoadAndAssign.
 type netdoctorVariables struct {
-	CfgEventMask     *ebpf.Variable `ebpf:"cfg_event_mask"`
-	CfgFilterAddr    *ebpf.Variable `ebpf:"cfg_filter_addr"`
-	CfgFilterIfindex *ebpf.Variable `ebpf:"cfg_filter_ifindex"`
-	CfgUnfiltered    *ebpf.Variable `ebpf:"cfg_unfiltered"`
-	UnusedEvent      *ebpf.Variable `ebpf:"unused_event"`
+	CfgEventMask        *ebpf.Variable `ebpf:"cfg_event_mask"`
+	CfgFilterAddr       *ebpf.Variable `ebpf:"cfg_filter_addr"`
+	CfgFilterIfindex    *ebpf.Variable `ebpf:"cfg_filter_ifindex"`
+	CfgReasonConsumed   *ebpf.Variable `ebpf:"cfg_reason_consumed"`
+	CfgReasonNotDropped *ebpf.Variable `ebpf:"cfg_reason_not_dropped"`
+	CfgUnfiltered       *ebpf.Variable `ebpf:"cfg_unfiltered"`
+	UnusedEvent         *ebpf.Variable `ebpf:"unused_event"`
 }
 
 // netdoctorPrograms contains all programs after they have been loaded into the kernel.

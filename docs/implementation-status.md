@@ -30,7 +30,7 @@ reason).
 
 | Feature | Status | Evidence |
 | --- | --- | --- |
-| eBPF tracer: drops with kernel drop reason and location | Done | `internal/ebpf` real-kernel test `TestTraceUDPClosedPortDrop` |
+| eBPF tracer: drops with kernel drop reason and location | Done | `internal/ebpf` real-kernel test `TestTraceUDPClosedPortDrop`; non-drop reasons resolved from BTF by name (`TestNonDropReasonsAcrossKernels`) so 5.17-6.0 kernels keep NO_SOCKET drops |
 | eBPF tracer: TCP retransmits, resets sent/received, state changes | Done | `TestTraceTCPResetToClosedPort`, `TestTraceTCPRetransmitWhenPeerLinkDown` |
 | Per-interface rx/tx packet counts | Done | asserted in `TestTraceUDPClosedPortDrop` |
 | In-kernel filter (netns+ifindex, IPv4/IPv6 address) | Done | `TestTraceFilterExcludesOtherTraffic` |
@@ -51,6 +51,14 @@ reason).
 | `--fail-on none|info|warning|error` on inspect/diagnose/report; exit 0 ok, 1 command error, 2 findings at threshold (report still written) | Done | `TestFailOnCLI`, `TestCheckFailOn` |
 | `report vm/x [-o json] [--bundle F.tar.gz] [--redact]`: diagnosis, topology (JSON/text/DOT/Mermaid), capabilities, inputs, SHA-256 manifest; deterministic archive; consistent IP/MAC redaction (names are not redacted) | Done | `TestReportBundleRedacted`, `TestReportJSON`, `internal/bundle` tests |
 
+## Documentation
+
+| Item | Status |
+| --- | --- |
+| CLI reference with exit codes and file formats | Done (`docs/cli.md`) |
+| eBPF internals: hooks, portability, attribution, overhead, tests | Done (`docs/ebpf.md`) |
+| README: new commands, tracer security model, limitations | Done |
+
 ## Agent extensibility (design only)
 
 | Item | Status | Evidence |
@@ -66,7 +74,7 @@ reason).
 | UDP/DNS, conntrack/routing, QEMU/vhost, OVS datapath hooks | Next eBPF hook groups |
 | Opt-in connectivity `probe` | Must be explicit and labeled with its origin |
 | OVN-Kubernetes / Kube-OVN adapters | Design in PR #7 |
-| Docs: architecture, eBPF internals, CLI reference, security model | |
+| Docs: per-finding reference for TRACE_* in docs/findings.md | |
 
 ## Resuming
 
