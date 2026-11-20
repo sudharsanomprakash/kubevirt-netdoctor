@@ -26,7 +26,7 @@ packages() {
 	LOG "packages"
 	export DEBIAN_FRONTEND=noninteractive
 	apt-get update -q
-	apt-get install -y -q containerd openvswitch-switch jq curl ca-certificates gpg \
+	apt-get install -y -q openvswitch-switch jq curl ca-certificates gpg \
 		iproute2 bridge-utils conntrack ethtool tcpdump make git
 	[ -e /dev/kvm ] || { echo "/dev/kvm missing: the VM needs nested virtualization" >&2; exit 1; }
 }
@@ -94,13 +94,31 @@ network() {
 	ip netns exec upstream bridge vlan add dev sw-o vid 200
 }
 
-kubernetes() {
-	LOG "containerd + kubeadm $K8S_MINOR"
+# runtime installs containerd 2.x from Docker's repository. KubeVirt mounts
+# container disks as Kubernetes image volumes, which need containerd >= 2.1;
+# Ubuntu 24.04's containerd 1.7 creates the mount but leaves it empty.
+runtime() {
+	LOG "containerd 2.x"
+	if ! containerd --version 2>/dev/null | grep -Eq ' v?2\.([1-9]|[1-9][0-9])\.'; then
+		install -d -m 0755 /etc/apt/keyrings
+		curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --batch --yes --dearmor -o /etc/apt/keyrings/docker.gpg
+		echo "deb [signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" >/etc/apt/sources.list.d/docker.list
+		apt-get update -q
+		apt-get install -y -q containerd.io
+		rm -f /etc/containerd/config.toml
+	fi
 	if ! grep -q 'SystemdCgroup = true' /etc/containerd/config.toml 2>/dev/null; then
 		mkdir -p /etc/containerd
 		containerd config default | sed 's/SystemdCgroup = false/SystemdCgroup = true/' >/etc/containerd/config.toml
 		systemctl restart containerd
+		systemctl restart kubelet 2>/dev/null || true
 	fi
+	containerd --version
+	containerd --version | grep -Eq ' v?2\.([1-9]|[1-9][0-9])\.' || { echo "containerd >= 2.1 is required for KubeVirt image volumes" >&2; exit 1; }
+}
+
+kubernetes() {
+	LOG "kubeadm $K8S_MINOR"
 	install -d -m 0755 /etc/apt/keyrings
 	curl -fsSL "https://pkgs.k8s.io/core:/stable:/$K8S_MINOR/deb/Release.key" | gpg --batch --yes --dearmor -o /etc/apt/keyrings/kubernetes.gpg
 	echo "deb [signed-by=/etc/apt/keyrings/kubernetes.gpg] https://pkgs.k8s.io/core:/stable:/$K8S_MINOR/deb/ /" >/etc/apt/sources.list.d/kubernetes.list
@@ -176,8 +194,9 @@ netdoctor() {
 need_root
 case "${1:-all}" in
 network) kernel; network ;;
+runtime) runtime ;;
 netdoctor) netdoctor ;;
-all) packages; kernel; network; kubernetes; addons; netdoctor
+all) packages; kernel; network; runtime; kubernetes; addons; netdoctor
 	LOG "done: run 'sudo hack/lab/workloads.sh' next" ;;
-*) echo "usage: $0 [all|network|netdoctor]" >&2; exit 2 ;;
+*) echo "usage: $0 [all|network|runtime|netdoctor]" >&2; exit 2 ;;
 esac

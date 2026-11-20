@@ -11,6 +11,13 @@ kubectl apply -f "$dir/manifests/10-networks.yaml"
 sed "s/@KV@/$KV/g" "$dir/manifests/20-vms.yaml.in" | kubectl apply -f -
 kubectl apply -f "$dir/manifests/30-apps.yaml"
 
+# Recreate any VMI that failed before a fix (for example the containerd
+# upgrade); the VMs have runStrategy Always, so KubeVirt starts them again.
+for vm in vm-masq vm-bridge vm-ovs; do
+	if ! kubectl -n lab get vmi "$vm" -o jsonpath='{.status.phase}' 2>/dev/null | grep -q Running; then
+		kubectl -n lab delete vmi "$vm" --ignore-not-found --wait=false
+	fi
+done
 echo "waiting for VMs and pods..."
 for vm in vm-masq vm-bridge vm-ovs; do
 	kubectl -n lab wait vmi "$vm" --for=condition=Ready --timeout=600s
