@@ -17,6 +17,57 @@ reason).
 | Kubernetes / KubeVirt | **None available**: KubeVirt end-to-end scenarios cannot be executed here |
 | Toolchain | Go 1.26.10, clang 18, libbpf 1.3 headers |
 
+## Coverage of the master directive (audit 2026-11-21)
+
+This table is an honest map of what is implemented and validated. **The full production
+release (directive section 22) is release-blocked.** v0.1.0 is the Phase 1 milestone: an
+early pre-release of what is validated today.
+
+| Directive area | Status | Notes |
+| --- | --- | --- |
+| Agent extensibility requirement | Done (design only, as required) | `docs/architecture-agents.md`; `internal/archtest` enforces a read-only engine; no remediation code |
+| 4.1 Kubernetes discovery | Mostly done | VM/VMI, launcher, Multus, NAD, migration state, capabilities. **Missing:** NetworkPolicy discovery |
+| 4.2 Host discovery | Partial | Links, bridges, VLANs, bonds, routes (all tables), OVS. **Missing:** policy rules (`ip rule`), neighbor tables, interface counters, sysctls, driver/offload/queue info |
+| 4.3 / 5.1–5.2 Kernel: drops, TCP | Done (validated live) | kfree_skb with reason and location; retransmit, resets, state; interface counts. **Missing:** RTT/congestion beyond srtt, TCP timeouts, fragmentation |
+| 5.3 UDP/DNS | Not started | |
+| 5.4 Routing/conntrack | Not started | |
+| 5.5 Softirq/scheduling | Not started | |
+| 5.6 QEMU/virtio/vhost | Not started | Launcher netns and tap/k6t interface counts only |
+| 5.7 OVS runtime/datapath | Partial | Config and flow summary. **Missing:** datapath stats, upcalls, drops |
+| 5.8 eBPF runtime management | Done | Feature detection, CO-RE, bounded buffers, lost-event accounting, overhead, clean detach. Rate limiting is buffer-bound only |
+| 6 VM attribution | Done for netns/ifindex/address | Four levels; pod-UID mismatch detection. **Not tested:** migration, ifindex reuse |
+| 7 Path reconstruction | Partial | Topology graph with provenance. **Missing:** forwarding evidence per hop |
+| 8 CNI adapters | Partial | OVS and Linux bridge validated live; macvlan/ipvlan/SR-IOV/host-device partial; OVN-K and Kube-OVN designed only (proposal 0002); Calico/Cilium/Flannel route view only |
+| 10 Active probes (`probe`) | Not started | |
+| 11 Correlation engine | Partial | Rules with evidence, categories and attribution. **Missing:** a unified evidence-record schema and timelines |
+| 12 CLI | Mostly done | inspect, topology, diagnose, trace, report, capabilities, version, `--fail-on`. **Missing:** `probe` |
+| 13 Host collector | Partial | Snapshot, trace, capabilities. **Missing:** snapshot comparison |
+| 14 Reporting | Mostly done | Text, JSON, DOT, Mermaid, bundles, redaction. **Missing:** evidence timeline, snapshot diff |
+| 15 Security | Partial | Read-only defaults, fixed command allowlist, redaction, archtest, Dependabot. **Missing:** written threat model, govulncheck/SAST in CI |
+| 16 Tests | Partial | Unit, golden, fake cluster, netns, real-kernel eBPF, live KubeVirt lab (43/43). **Missing:** DNS, blackhole route, migration, performance suite beyond overhead |
+| 17 CI/CD | Mostly done | Lint, tests, BPF build, kernel tests, cross-compile, tag-driven release. **Missing:** vulnerability scanning, reproducibility check |
+| 18 Docs | Mostly done | README, CLI, eBPF, findings, CNI support, agents, lab. **Missing:** threat model, compatibility matrix page |
+
+### Acceptance scenarios (directive section 19)
+
+| Scenario | Status | Evidence |
+| --- | --- | --- |
+| A VLAN mismatch | Validated live | Lab C, E |
+| B OVS forwarding problem | Partially validated | OVS re-tag live (lab E); missing OVS port by unit/golden only |
+| C MTU | Validated live | Lab H |
+| D Kernel drop | Validated live | Lab I: DirectlyAttributed drops on a real launcher pod |
+| E TCP retransmission | Validated in netns | Guest TCP is not observable from the host (documented) |
+| F LACP inconsistency | Unit and golden only | veth bonds cannot negotiate LACP; needs a real NIC or OVS LACP lab |
+| G Live migration | Not validated | Needs a two-node lab |
+| H Unsupported environment | Validated | Unprivileged run; hooks missing from the kernel are reported |
+| I DNS failure | Not started | Needs `probe` and UDP/DNS tracing |
+| J Multi-interface VM | Validated live | Lab VMs with pod and secondary networks |
+
+### Outstanding regression
+
+- **OVS false-port fix on the owner's cluster:** not yet re-run on the original cluster
+  (older OVS CNI without `contPodUid`). The lab covers the newer OVS CNI only.
+
 ## Phase 1: audit and stabilize
 
 | Feature | Status | Evidence |
