@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"time"
 
@@ -50,7 +51,12 @@ func newHostCommand(streams genericiooptions.IOStreams, env HostEnv) *cobra.Comm
 		Use:   "host",
 		Short: "Host network inspection (experimental)",
 	}
-	cmd.AddCommand(newHostCollectCommand(streams, env), newHostTraceCommand(streams, env), newHostCapabilitiesCommand(streams, env))
+	cmd.AddCommand(
+		newHostCollectCommand(streams, env),
+		newHostDiffCommand(streams),
+		newHostTraceCommand(streams, env),
+		newHostCapabilitiesCommand(streams, env),
+	)
 	return cmd
 }
 
@@ -127,4 +133,73 @@ recorded as Failed in the snapshot instead of aborting.`,
 	cmd.Flags().BoolVar(&noFlows, "skip-flows", false, "Do not summarize OpenFlow tables")
 	cmd.Flags().DurationVar(&cmdTimeout, "command-timeout", 10*time.Second, "Timeout for each command")
 	return cmd
+}
+
+func newHostDiffCommand(streams genericiooptions.IOStreams) *cobra.Command {
+	var (
+		format        string
+		allowMismatch bool
+	)
+	cmd := &cobra.Command{
+		Use:   "diff before.json after.json",
+		Short: "Compare two host snapshots offline (experimental)",
+		Long: `Compare two snapshots written by 'host collect'. It reads only the two
+files: no node and no Kubernetes API are contacted.
+
+Changes are grouped by object (interface, bridge VLAN, route, OVS bridge,
+port and bond). Volatile fields such as timestamps and counters are ignored.`,
+		Example: `  kubectl-netdoctor host diff before.json after.json
+  kubectl-netdoctor host diff before.json after.json -o json`,
+		Args: cobra.ExactArgs(2),
+		RunE: func(_ *cobra.Command, args []string) error {
+			before, err := host.LoadSnapshot(args[0])
+			if err != nil {
+				return err
+			}
+			after, err := host.LoadSnapshot(args[1])
+			if err != nil {
+				return err
+			}
+			if before.NodeName != after.NodeName && !allowMismatch {
+				return fmt.Errorf("snapshots are from different nodes (%q and %q); pass --allow-node-name-mismatch to compare them anyway",
+					before.NodeName, after.NodeName)
+			}
+			diff := host.DiffSnapshots(before, after)
+			switch format {
+			case "json":
+				return output.WriteJSON(streams.Out, diff)
+			case "text":
+				writeDiffText(streams.Out, diff)
+				return nil
+			default:
+				return fmt.Errorf("unknown output format %q; use text or json", format)
+			}
+		},
+	}
+	cmd.Flags().StringVarP(&format, "output", "o", "text", "Output format: text or json")
+	cmd.Flags().BoolVar(&allowMismatch, "allow-node-name-mismatch", false, "Compare snapshots from different nodes")
+	return cmd
+}
+
+func writeDiffText(w io.Writer, diff host.SnapshotDiff) {
+	if len(diff.Changes) == 0 {
+		_, _ = fmt.Fprintln(w, "no differences")
+		return
+	}
+	group := ""
+	for _, c := range diff.Changes {
+		next := c.Object + " " + c.Name
+		if next != group {
+			_, _ = fmt.Fprintln(w, next)
+			group = next
+		}
+		before, after := c.Before, c.After
+		if before == "" {
+			before = "-"
+		}
+		if after == "" {
+			after = "-"
+		}
+		_, _ = fmt.Fprintf(w, "  %s: %s -> %s\n", c.Field, before, after)
+	}
 }
