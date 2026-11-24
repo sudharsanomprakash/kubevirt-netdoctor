@@ -403,13 +403,13 @@ findings and partial results instead of failures.
   pod, no privileged component. An operator runs the collector on the node explicitly
   and passes the resulting file to `--host-snapshot`.
 - **Read-only, fixed commands, no shell.** It runs only `ip -j -d link show`,
-  `ip -j addr show`, `ip -j -4/-6 route show table all`, `bridge -j vlan show`,
-  `ip -j netns list`, `ovs-vsctl --format=json list Bridge|Port|Interface` (selected
+  `ip -j addr show`, `ip -j -4/-6 route show table all`, `ip -j neigh show`,
+  `bridge -j vlan show`, `ip -j netns list`, `ovs-vsctl --format=json list Bridge|Port|Interface` (selected
   columns), `ovs-appctl bond/show`, `ovs-appctl lacp/show` and
   `ovs-ofctl dump-flows <bridge>`, and reads `/proc/net/bonding/*`. Commands are executed
   directly (never through a shell), no user input becomes an argument, and the only
   dynamic argument (an OVS bridge name read from OVSDB) is validated first.
-- **Least privilege.** Link, address, route and bridge VLAN state is readable as an
+- **Least privilege.** Link, address, route, neighbor and bridge VLAN state is readable as an
   unprivileged user. OVS (database and `ovs-vswitchd` control sockets) and
   `/proc/net/bonding` typically need root or membership in the group owning the OVS
   sockets. Run with the least privilege that covers what you need; anything unreadable

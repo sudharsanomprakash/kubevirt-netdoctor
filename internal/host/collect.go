@@ -65,6 +65,7 @@ var (
 	cmdAddrs       = []string{"ip", "-j", "addr", "show"}
 	cmdRoutes4     = []string{"ip", "-j", "-4", "route", "show", "table", "all"}
 	cmdRoutes6     = []string{"ip", "-j", "-6", "route", "show", "table", "all"}
+	cmdNeighbors   = []string{"ip", "-j", "neigh", "show"}
 	cmdBridgeVLANs = []string{"bridge", "-j", "vlan", "show"}
 	cmdNetns       = []string{"ip", "-j", "netns", "list"}
 	cmdOVSBridges  = []string{"ovs-vsctl", "--format=json", "--data=json", "--columns=_uuid,name,ports,fail_mode,datapath_type", "list", "Bridge"}
@@ -199,6 +200,16 @@ func (c *collector) collectLinux(procFS fs.FS) {
 	}
 	if routesOK {
 		c.record(SourceRoutes, StatusOK, nil, "")
+	}
+
+	if out, ok := c.run(SourceNeighbors, cmdNeighbors); ok {
+		neighbors, err := ParseNeighbors(out)
+		if err != nil {
+			c.record(SourceNeighbors, StatusFailed, cmdNeighbors, err.Error())
+		} else {
+			c.snap.Neighbors = neighbors
+			c.record(SourceNeighbors, StatusOK, cmdNeighbors, "")
+		}
 	}
 
 	if out, ok := c.run(SourceBridgeVLANs, cmdBridgeVLANs); ok {

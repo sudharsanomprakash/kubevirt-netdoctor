@@ -1,0 +1,4 @@
+[{"dst": "192.0.2.1", "dev": "br1", "lladdr": "52:54:00:12:34:56", "state": ["REACHABLE"], "probes": 1, "confirmed": 100, "updated": 200},
+ {"dst": "192.0.2.254", "dev": "br1", "lladdr": "52:54:00:12:34:57", "state": "STALE"},
+ {"dst": "198.51.100.1", "dev": "eno1", "lladdr": "52:54:00:12:34:58", "state": ["FAILED"]},
+ {"dst": "2001:db8::1", "dev": "br1", "state": ["INCOMPLETE"]}]

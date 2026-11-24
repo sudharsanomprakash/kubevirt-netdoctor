@@ -166,6 +166,57 @@ func ParseRoutes(data []byte, ipv6 bool) ([]Route, error) {
 	return out, nil
 }
 
+// ParseNeighbors parses `ip -j neigh show`. iproute2 prints "state" either as
+// a string or, in newer releases, as an array of flags; the first entry is the
+// primary state. Entries without a destination (for example the local entries
+// some kernels add) are skipped.
+func ParseNeighbors(data []byte) ([]Neighbor, error) {
+	if len(data) == 0 {
+		return nil, nil // ip prints nothing when the table is empty
+	}
+	var entries []struct {
+		Dst    string          `json:"dst"`
+		Dev    string          `json:"dev"`
+		LLAddr string          `json:"lladdr"`
+		State  json.RawMessage `json:"state"`
+	}
+	if err := json.Unmarshal(data, &entries); err != nil {
+		return nil, fmt.Errorf("parsing ip neigh JSON: %w", err)
+	}
+	out := make([]Neighbor, 0, len(entries))
+	for _, e := range entries {
+		if e.Dst == "" {
+			continue
+		}
+		state, err := neighborState(e.State)
+		if err != nil {
+			return nil, fmt.Errorf("neighbor %s: %w", e.Dst, err)
+		}
+		out = append(out, Neighbor{Address: e.Dst, Dev: e.Dev, MAC: e.LLAddr, State: state})
+	}
+	return out, nil
+}
+
+// neighborState accepts the string and array forms iproute2 uses for the
+// neighbor state.
+func neighborState(data json.RawMessage) (string, error) {
+	if len(data) == 0 {
+		return "", nil
+	}
+	var s flexString
+	if err := json.Unmarshal(data, &s); err == nil {
+		return string(s), nil
+	}
+	var list []string
+	if err := json.Unmarshal(data, &list); err != nil {
+		return "", fmt.Errorf("state is neither a string nor an array of strings")
+	}
+	if len(list) == 0 {
+		return "", nil
+	}
+	return list[0], nil
+}
+
 func normalizeDst(dst string, ipv6 bool) (string, error) {
 	if dst == "default" {
 		if ipv6 {

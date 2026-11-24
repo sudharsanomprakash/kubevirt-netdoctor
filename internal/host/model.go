@@ -23,6 +23,7 @@ type Snapshot struct {
 	Sources     []SourceStatus   `json:"sources"`
 	Interfaces  []Interface      `json:"interfaces,omitempty"`
 	Routes      []Route          `json:"routes,omitempty"`
+	Neighbors   []Neighbor       `json:"neighbors,omitempty"`
 	BridgeVLANs []BridgePortVLAN `json:"bridgeVLANs,omitempty"`
 	Namespaces  []string         `json:"namespaces,omitempty"`
 	// OVS is nil when OVS state was not collected or OVS is not installed;
@@ -35,6 +36,7 @@ const (
 	SourceLinks       = "links"
 	SourceAddresses   = "addresses"
 	SourceRoutes      = "routes"
+	SourceNeighbors   = "neighbors"
 	SourceBridgeVLANs = "bridge-vlans"
 	SourceNamespaces  = "namespaces"
 	SourceBonding     = "bonding"
@@ -167,6 +169,16 @@ type Route struct {
 	Metric   int    `json:"metric,omitempty"`
 	// Type is the route type; empty means unicast.
 	Type string `json:"type,omitempty"`
+}
+
+// Neighbor is one entry of the host neighbor table (ARP for IPv4, ND for
+// IPv6). State is the kernel's reachability verdict, for example REACHABLE,
+// STALE, FAILED or INCOMPLETE.
+type Neighbor struct {
+	Address string `json:"address"`
+	Dev     string `json:"dev,omitempty"`
+	MAC     string `json:"mac,omitempty"`
+	State   string `json:"state"`
 }
 
 // OVS is the Open vSwitch state of the host.
