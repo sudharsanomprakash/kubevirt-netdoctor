@@ -9,6 +9,12 @@ report schema; such changes are called out here.
 
 ## [Unreleased]
 
+### Security
+
+- CI runs `govulncheck` over the code the project actually calls, and
+  `golang.org/x/net` is bumped to v0.60.0 to clear the called vulnerabilities it
+  reported.
+
 ### Added
 
 - `kubectl netdoctor topology`: graph of the VM network path with every relationship

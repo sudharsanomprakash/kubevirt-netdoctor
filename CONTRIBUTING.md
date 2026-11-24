@@ -18,6 +18,7 @@ make build        # builds bin/kubectl-netdoctor
 make test         # unit and golden tests
 make race         # tests with the race detector
 make lint         # golangci-lint
+make vulncheck    # govulncheck over the called code
 ```
 
 `make integration` runs the host collector against real iproute2 output in a
@@ -93,7 +94,7 @@ A test enforces the IP rule for fixtures.
   [Developer Certificate of Origin](https://developercertificate.org/):
   `git commit -s`.
 - CI runs formatting, `go vet`, tests with the race detector, golden checks,
-  golangci-lint and cross-compilation. All must pass before merge.
+  golangci-lint, `govulncheck` and cross-compilation. All must pass before merge.
 - Update `CHANGELOG.md` under *Unreleased* for user-visible changes.
 
 ## Releases

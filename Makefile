@@ -8,8 +8,9 @@ LDFLAGS := -s -w \
 	-X $(PKG)/internal/version.Commit=$(COMMIT) \
 	-X $(PKG)/internal/version.Date=$(DATE)
 PLATFORMS := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64
+GOVULNCHECK_VERSION ?= v1.10.0
 
-.PHONY: all build test race vet fmt fmt-check lint verify golden integration bpf-generate bpf-check bpf-test dist clean
+.PHONY: all build test race vet fmt fmt-check lint vulncheck verify golden integration bpf-generate bpf-check bpf-test dist clean
 
 all: fmt vet lint test build
 
@@ -34,7 +35,10 @@ lint: ## Requires golangci-lint v2
 fmt-check:
 	@test -z "$$(gofmt -s -l .)" || { gofmt -s -l .; echo "files need gofmt -s"; exit 1; }
 
-verify: fmt-check vet lint race ## Every gate a change must pass before it is pushed
+vulncheck: ## Check for known vulnerabilities in the code paths the project calls
+	go run golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION) ./...
+
+verify: fmt-check vet lint race vulncheck ## Every gate a change must pass before it is pushed
 
 bpf-generate: ## Recompile bpf/*.c and regenerate the Go bindings (needs clang)
 	go generate ./internal/ebpf
