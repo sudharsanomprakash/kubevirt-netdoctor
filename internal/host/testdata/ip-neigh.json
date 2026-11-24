@@ -1,0 +1,6 @@
+[
+  {"dst":"192.0.2.1","dev":"br1","lladdr":"aa:bb:cc:dd:ee:01","state":["REACHABLE"]},
+  {"dst":"192.0.2.2","dev":"br1","lladdr":"aa:bb:cc:dd:ee:02","state":["STALE"]},
+  {"dst":"192.0.2.3","dev":"br1","state":["FAILED"]},
+  {"dst":"192.0.2.4","dev":"br1","state":["INCOMPLETE"]}
+]
