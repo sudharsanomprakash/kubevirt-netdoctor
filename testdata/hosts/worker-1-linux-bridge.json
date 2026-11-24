@@ -28,6 +28,9 @@
     {"table": "main", "dst": "0.0.0.0/0", "gateway": "192.0.2.1", "dev": "eth0", "protocol": "static", "metric": 100},
     {"table": "main", "dst": "192.0.2.0/24", "dev": "eth0", "protocol": "kernel"}
   ],
+  "rules": [
+    {"priority": 100, "fwmark": "0x1/0xffff", "src": "all", "dst": "all", "table": "100"}
+  ],
   "bridgeVLANs": [
     {"port": "bond0", "vlans": [{"min": 1, "max": 1, "pvid": true, "untagged": true}, {"min": 100, "max": 100}]},
     {"port": "br1", "vlans": [{"min": 1, "max": 1, "pvid": true, "untagged": true}]},

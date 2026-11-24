@@ -166,6 +166,42 @@ func ParseRoutes(data []byte, ipv6 bool) ([]Route, error) {
 	return out, nil
 }
 
+// ParseRules parses `ip -j rule show` (IPv4 or IPv6). Rules are kept in the
+// order the kernel prints them, which is their priority order.
+func ParseRules(data []byte) ([]Rule, error) {
+	var entries []struct {
+		Priority int        `json:"priority"`
+		Table    flexString `json:"table"`
+		Src      string     `json:"src"`
+		Dst      string     `json:"dst"`
+		FwMark   string     `json:"fwmark"`
+		IIF      string     `json:"iif"`
+		OIF      string     `json:"oif"`
+		Action   flexString `json:"action"`
+	}
+	if err := json.Unmarshal(data, &entries); err != nil {
+		return nil, fmt.Errorf("parsing ip rule JSON: %w", err)
+	}
+	out := make([]Rule, 0, len(entries))
+	for _, e := range entries {
+		table := string(e.Table)
+		if table == "254" {
+			table = "main"
+		}
+		out = append(out, Rule{
+			Priority: e.Priority,
+			Table:    table,
+			Src:      e.Src,
+			Dst:      e.Dst,
+			FwMark:   e.FwMark,
+			IIF:      e.IIF,
+			OIF:      e.OIF,
+			Action:   string(e.Action),
+		})
+	}
+	return out, nil
+}
+
 func normalizeDst(dst string, ipv6 bool) (string, error) {
 	if dst == "default" {
 		if ipv6 {

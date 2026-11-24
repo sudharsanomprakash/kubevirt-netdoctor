@@ -1,0 +1,7 @@
+[
+  {"priority":0,"src":"all","dst":"all","table":"local"},
+  {"priority":100,"fwmark":"0x1/0xffff","src":"all","dst":"all","table":100},
+  {"priority":200,"src":"192.0.2.0/24","dst":"all","iif":"br1","oif":"eth0","table":"main"},
+  {"priority":32766,"src":"all","dst":"all","table":"main"},
+  {"priority":32767,"src":"all","dst":"all","action":"unreachable"}
+]

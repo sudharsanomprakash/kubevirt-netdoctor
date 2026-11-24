@@ -20,9 +20,11 @@ type Snapshot struct {
 	CollectedAt string `json:"collectedAt,omitempty"`
 	// Sources records what each collector did, so missing data is never
 	// mistaken for absent configuration.
-	Sources     []SourceStatus   `json:"sources"`
-	Interfaces  []Interface      `json:"interfaces,omitempty"`
-	Routes      []Route          `json:"routes,omitempty"`
+	Sources    []SourceStatus `json:"sources"`
+	Interfaces []Interface    `json:"interfaces,omitempty"`
+	Routes     []Route        `json:"routes,omitempty"`
+	// Rules is the node's policy-routing rules (ip rule), IPv4 then IPv6.
+	Rules       []Rule           `json:"rules,omitempty"`
 	BridgeVLANs []BridgePortVLAN `json:"bridgeVLANs,omitempty"`
 	Namespaces  []string         `json:"namespaces,omitempty"`
 	// OVS is nil when OVS state was not collected or OVS is not installed;
@@ -35,6 +37,7 @@ const (
 	SourceLinks       = "links"
 	SourceAddresses   = "addresses"
 	SourceRoutes      = "routes"
+	SourceRules       = "rules"
 	SourceBridgeVLANs = "bridge-vlans"
 	SourceNamespaces  = "namespaces"
 	SourceBonding     = "bonding"
@@ -154,6 +157,20 @@ type PortVLANs struct {
 	Max      int  `json:"max"`
 	PVID     bool `json:"pvid,omitempty"`
 	Untagged bool `json:"untagged,omitempty"`
+}
+
+// Rule is one policy-routing rule (ip rule). Priority is the rule's order;
+// Table is the table it selects, or Action is a terminal action such as
+// "unreachable".
+type Rule struct {
+	Priority int    `json:"priority"`
+	Table    string `json:"table,omitempty"`
+	Src      string `json:"src,omitempty"`
+	Dst      string `json:"dst,omitempty"`
+	FwMark   string `json:"fwmark,omitempty"`
+	IIF      string `json:"iif,omitempty"`
+	OIF      string `json:"oif,omitempty"`
+	Action   string `json:"action,omitempty"`
 }
 
 // Route is an entry of a host routing table.

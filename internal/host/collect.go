@@ -65,6 +65,8 @@ var (
 	cmdAddrs       = []string{"ip", "-j", "addr", "show"}
 	cmdRoutes4     = []string{"ip", "-j", "-4", "route", "show", "table", "all"}
 	cmdRoutes6     = []string{"ip", "-j", "-6", "route", "show", "table", "all"}
+	cmdRules4      = []string{"ip", "-j", "-4", "rule", "show"}
+	cmdRules6      = []string{"ip", "-j", "-6", "rule", "show"}
 	cmdBridgeVLANs = []string{"bridge", "-j", "vlan", "show"}
 	cmdNetns       = []string{"ip", "-j", "netns", "list"}
 	cmdOVSBridges  = []string{"ovs-vsctl", "--format=json", "--data=json", "--columns=_uuid,name,ports,fail_mode,datapath_type", "list", "Bridge"}
@@ -199,6 +201,25 @@ func (c *collector) collectLinux(procFS fs.FS) {
 	}
 	if routesOK {
 		c.record(SourceRoutes, StatusOK, nil, "")
+	}
+
+	rulesOK := true
+	for _, argv := range [][]string{cmdRules4, cmdRules6} {
+		out, ok := c.run(SourceRules, argv)
+		if !ok {
+			rulesOK = false
+			continue
+		}
+		rules, err := ParseRules(out)
+		if err != nil {
+			c.record(SourceRules, StatusFailed, argv, err.Error())
+			rulesOK = false
+			continue
+		}
+		c.snap.Rules = append(c.snap.Rules, rules...)
+	}
+	if rulesOK {
+		c.record(SourceRules, StatusOK, nil, "")
 	}
 
 	if out, ok := c.run(SourceBridgeVLANs, cmdBridgeVLANs); ok {
