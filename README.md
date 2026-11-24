@@ -48,7 +48,9 @@ network, and is explicit about what it could not see.
 ## What is observed
 
 Which CNI plugins get host-level checks, and which are supported at the Kubernetes API
-level only, is listed in the [CNI support matrix](docs/cni-support.md).
+level only, is listed in the [CNI support matrix](docs/cni-support.md). The versions
+validated in the lab and the kernel requirements are in the
+[compatibility matrix](docs/compatibility.md).
 
 | Layer | Source | Command |
 | --- | --- | --- |
