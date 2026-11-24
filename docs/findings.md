@@ -26,6 +26,7 @@ inspected state is consistent; it does **not** mean the network works.
 | `ACCESS_DENIED` | Warning | Unavailable | A `get`/`list` was rejected (HTTP 401/403). Dependent checks are skipped. |
 | `API_UNAVAILABLE` | Warning | Unavailable | An API group is not served (e.g. Multus NAD CRD absent) or a request failed for non-RBAC reasons. |
 | `VMI_NOT_RUNNING` | Info / Warning / Error | Confirmed / Suspected | No VMI exists (stopped VM: Info; VM expected to run: Warning) or the VMI phase is not `Running` (Pending/Scheduling/Scheduled/Unknown: Warning, Failed: Error, Succeeded: Info). |
+| `NETWORK_POLICY_SELECTS_LAUNCHER` | Info | Confirmed | A NetworkPolicy's `podSelector` matches the launcher pod. No claim is made about whether traffic is allowed; enforcement depends on the CNI. |
 | `NAD_NOT_FOUND` | Error | Confirmed | A NetworkAttachmentDefinition referenced by `spec.networks[].multus.networkName` does not exist. |
 | `NAD_REFERENCE_INVALID` | Error | Confirmed | `multus.networkName` is not `<name>` or `<namespace>/<name>`. |
 | `NAD_CONFIG_INVALID` | Error | Confirmed | `spec.config` is not valid JSON or not a valid CNI config/conflist (missing `type`, empty `plugins`, VLAN out of range, wrongly typed fields). |

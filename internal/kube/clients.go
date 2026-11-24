@@ -26,7 +26,10 @@ var (
 	NetworkAttachmentDefinitionGVR = schema.GroupVersionResource{
 		Group: "k8s.cni.cncf.io", Version: "v1", Resource: "network-attachment-definitions",
 	}
-	PodGVR = schema.GroupVersionResource{Version: "v1", Resource: "pods"}
+	PodGVR           = schema.GroupVersionResource{Version: "v1", Resource: "pods"}
+	NetworkPolicyGVR = schema.GroupVersionResource{
+		Group: "networking.k8s.io", Version: "v1", Resource: "networkpolicies",
+	}
 )
 
 // Clients bundles the API clients needed for an inspection.

@@ -4,6 +4,7 @@ APIS
   Available    virtualmachines.kubevirt.io                        required VM lookup
   Available    virtualmachineinstances.kubevirt.io                required running instance, interfaces and node
   Available    network-attachment-definitions.k8s.cni.cncf.io     optional Multus secondary network configuration
+  Unavailable  networkpolicies.networking.k8s.io                  optional NetworkPolicies that may select the launcher pod
   Unavailable  userdefinednetworks.k8s.ovn.org                    optional OVN-Kubernetes user-defined networks (presence indicates OVN-Kubernetes)
   Unavailable  subnets.kubeovn.io                                 optional Kube-OVN subnets (presence indicates Kube-OVN)
   Unavailable  nodenetworkstates.nmstate.io                       optional kubernetes-nmstate node state (presence indicates nmstate)
@@ -13,6 +14,7 @@ ACCESS
   Allowed      get   virtualmachineinstances.kubevirt.io
   Allowed      list  pods
   Allowed      get   network-attachment-definitions.k8s.cni.cncf.io
+  Allowed      list  networkpolicies.networking.k8s.io
 
 FEATURES
   Available    inspect / topology / diagnose: VM, VMI and virt-launcher pod reads are allowed

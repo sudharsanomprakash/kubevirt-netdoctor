@@ -132,6 +132,10 @@ func Inspect(ctx context.Context, c *kube.Clients, target topology.Target) (*top
 		}
 	}
 
+	if pod != nil {
+		topo.NetworkPolicies = lookupNetworkPolicies(ctx, c, target.Namespace, pod, &topo.AccessIssues)
+	}
+
 	res := topology.Correlate(topology.CorrelationInput{
 		Namespace: target.Namespace,
 		Spec:      spec,
