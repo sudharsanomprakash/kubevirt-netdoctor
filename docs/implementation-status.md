@@ -27,7 +27,7 @@ early pre-release of what is validated today.
 | --- | --- | --- |
 | Agent extensibility requirement | Done (design only, as required) | `docs/architecture-agents.md`; `internal/archtest` enforces a read-only engine; no remediation code |
 | 4.1 Kubernetes discovery | Mostly done | VM/VMI, launcher, Multus, NAD, migration state, capabilities. **Missing:** NetworkPolicy discovery |
-| 4.2 Host discovery | Partial | Links, bridges, VLANs, bonds, routes (all tables), OVS. **Missing:** policy rules (`ip rule`), neighbor tables, interface counters, sysctls, driver/offload/queue info |
+| 4.2 Host discovery | Partial | Links, bridges, VLANs, bonds, routes (all tables), neighbor tables, OVS. **Missing:** policy rules (`ip rule`), interface counters, sysctls, driver/offload/queue info |
 | 4.3 / 5.1–5.2 Kernel: drops, TCP | Done (validated live) | kfree_skb with reason and location; retransmit, resets, state; interface counts. **Missing:** RTT/congestion beyond srtt, TCP timeouts, fragmentation |
 | 5.3 UDP/DNS | Not started | |
 | 5.4 Routing/conntrack | Not started | |

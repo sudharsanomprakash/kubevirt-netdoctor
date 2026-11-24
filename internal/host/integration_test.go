@@ -21,7 +21,7 @@ func TestIntegrationCollect(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, name := range []string{SourceLinks, SourceAddresses, SourceRoutes, SourceBridgeVLANs, SourceNamespaces} {
+	for _, name := range []string{SourceLinks, SourceAddresses, SourceRoutes, SourceNeighbors, SourceBridgeVLANs, SourceNamespaces} {
 		if src, _ := snap.Source(name); src.Status != StatusOK {
 			t.Errorf("source %s: %+v", name, src)
 		}

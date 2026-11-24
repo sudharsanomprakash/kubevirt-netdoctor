@@ -122,6 +122,33 @@ func TestParseBridgeVLANs(t *testing.T) {
 	}
 }
 
+func TestParseNeighbors(t *testing.T) {
+	if n, err := ParseNeighbors(nil); err != nil || n != nil {
+		t.Errorf("empty output: %v %v", n, err)
+	}
+	got, err := ParseNeighbors(read(t, "ip-neigh.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []Neighbor{
+		{Address: "192.0.2.1", Dev: "br1", MAC: "52:54:00:12:34:56", State: "REACHABLE"},
+		{Address: "192.0.2.254", Dev: "br1", MAC: "52:54:00:12:34:57", State: "STALE"},
+		{Address: "198.51.100.1", Dev: "eno1", MAC: "52:54:00:12:34:58", State: "FAILED"},
+		{Address: "2001:db8::1", Dev: "br1", State: "INCOMPLETE"},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("neighbors:\n got %+v\nwant %+v", got, want)
+	}
+	// Entries without a destination are local and carry no route evidence.
+	local, err := ParseNeighbors([]byte(`[{"dev":"lo","state":["REACHABLE"]},{"dst":"192.0.2.1","dev":"eth0","lladdr":"aa:bb:cc:dd:ee:ff","state":"STALE"}]`))
+	if err != nil || len(local) != 1 || local[0].Address != "192.0.2.1" {
+		t.Errorf("local entry: %+v %v", local, err)
+	}
+	if _, err := ParseNeighbors([]byte(`[{"dst":"192.0.2.1","state":{"x":1}}]`)); err == nil {
+		t.Error("an object where a state is expected must fail")
+	}
+}
+
 func TestParseNamespaces(t *testing.T) {
 	if ns, err := ParseNamespaces(nil); err != nil || ns != nil {
 		t.Errorf("empty output: %v %v", ns, err)
@@ -247,6 +274,7 @@ func allCommands() map[string]string {
 		strings.Join(cmdAddrs, " "):       "ip-addr.json",
 		strings.Join(cmdRoutes4, " "):     "ip-route4.json",
 		strings.Join(cmdRoutes6, " "):     "ip-route6.json",
+		strings.Join(cmdNeighbors, " "):   "ip-neigh.json",
 		strings.Join(cmdBridgeVLANs, " "): "bridge-vlan.json",
 		strings.Join(cmdOVSBridges, " "):  "ovs-bridge.json",
 		strings.Join(cmdOVSPorts, " "):    "ovs-port.json",
@@ -297,6 +325,9 @@ func TestCollectFull(t *testing.T) {
 	}
 	if f := snap.OVS.FindBridge("br-secure").Flows; f == nil || f.Count != 0 {
 		t.Errorf("br-secure flows: %+v", f)
+	}
+	if len(snap.Neighbors) != 4 {
+		t.Errorf("neighbors not collected: %+v", snap.Neighbors)
 	}
 	// Only allowlisted commands may run.
 	allowed := allCommands()
