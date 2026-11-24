@@ -247,6 +247,8 @@ func allCommands() map[string]string {
 		strings.Join(cmdAddrs, " "):       "ip-addr.json",
 		strings.Join(cmdRoutes4, " "):     "ip-route4.json",
 		strings.Join(cmdRoutes6, " "):     "ip-route6.json",
+		strings.Join(cmdRules4, " "):      "ip-rule.json",
+		strings.Join(cmdRules6, " "):      "ip-rule.json",
 		strings.Join(cmdBridgeVLANs, " "): "bridge-vlan.json",
 		strings.Join(cmdOVSBridges, " "):  "ovs-bridge.json",
 		strings.Join(cmdOVSPorts, " "):    "ovs-port.json",
@@ -285,6 +287,9 @@ func TestCollectFull(t *testing.T) {
 	}
 	if snap.NodeName != "worker-1" || snap.CollectedAt != "2026-01-01T00:00:00Z" || snap.SchemaVersion != SchemaVersion {
 		t.Errorf("metadata: %+v", snap)
+	}
+	if len(snap.Rules) != 10 || snap.Rules[1].FwMark != "0x1/0xffff" || snap.Rules[9].Action != "unreachable" {
+		t.Errorf("rules not collected: %+v", snap.Rules)
 	}
 	if br := snap.FindInterface("br1"); len(br.Addresses) != 2 {
 		t.Errorf("addresses not merged: %+v", br)
@@ -387,5 +392,25 @@ func TestNamesAgree(t *testing.T) {
 		if got := NamesAgree(tc.node, tc.hostname); got != tc.want {
 			t.Errorf("NamesAgree(%q, %q) = %v", tc.node, tc.hostname, got)
 		}
+	}
+}
+
+func TestParseRules(t *testing.T) {
+	rules, err := ParseRules(read(t, "ip-rule.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []Rule{
+		{Priority: 0, Table: "local", Src: "all", Dst: "all"},
+		{Priority: 100, Table: "100", Src: "all", Dst: "all", FwMark: "0x1/0xffff"},
+		{Priority: 200, Table: "main", Src: "192.0.2.0/24", Dst: "all", IIF: "br1", OIF: "eth0"},
+		{Priority: 32766, Table: "main", Src: "all", Dst: "all"},
+		{Priority: 32767, Src: "all", Dst: "all", Action: "unreachable"},
+	}
+	if !reflect.DeepEqual(rules, want) {
+		t.Errorf("rules:\n got %+v\nwant %+v", rules, want)
+	}
+	if _, err := ParseRules([]byte(`[{"priority":0,"table":{"x":1}}]`)); err == nil {
+		t.Error("an object where a table string or number is expected must fail")
 	}
 }
