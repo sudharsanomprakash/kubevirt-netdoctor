@@ -128,6 +128,12 @@ func TestDiagnoseScenarios(t *testing.T) {
 			args:   []string{"vm/db-03"}, wantIDs: []string{"VLAN_MISMATCH"}, golden: "diagnose-ovs-vlan-mismatch.json",
 		},
 		{
+			// Text form of the same scenario; the README demo is taken from it.
+			name: "ovs port VLAN tag mismatch (text)", fixture: "ovs-vlan-running.yaml", snapshot: "worker-2-ovs.json",
+			mutate: func(s *host.Snapshot) { ovsPort(s, "veth3e9a1c7b").Tag = intp(201) },
+			args:   []string{"vm/db-03", "-o", "text"}, wantIDs: []string{"VLAN_MISMATCH"}, golden: "diagnose-ovs-vlan-mismatch.txt",
+		},
+		{
 			name: "ovs uplink MTU below NAD MTU", fixture: "ovs-vlan-running.yaml", snapshot: "worker-2-ovs.json",
 			mutate: func(s *host.Snapshot) { s.OVS.FindInterface("ens1f1").MTU = intp(1500) },
 			args:   []string{"vm/db-03"}, wantIDs: []string{"MTU_MISMATCH"}, golden: "diagnose-ovs-mtu-mismatch.json",
