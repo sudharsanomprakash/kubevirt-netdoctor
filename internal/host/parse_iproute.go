@@ -166,6 +166,45 @@ func ParseRoutes(data []byte, ipv6 bool) ([]Route, error) {
 	return out, nil
 }
 
+// ParseNeighbors parses `ip -j neigh show`. The state field is an array in
+// current iproute2 and a bare string in older output; both are accepted.
+func ParseNeighbors(data []byte) ([]Neighbor, error) {
+	var entries []struct {
+		Dst    string     `json:"dst"`
+		Dev    string     `json:"dev"`
+		LLAddr string     `json:"lladdr"`
+		State  stringList `json:"state"`
+	}
+	if err := json.Unmarshal(data, &entries); err != nil {
+		return nil, fmt.Errorf("parsing ip neigh JSON: %w", err)
+	}
+	out := make([]Neighbor, 0, len(entries))
+	for _, e := range entries {
+		if e.Dst == "" {
+			continue
+		}
+		out = append(out, Neighbor{Address: e.Dst, Device: e.Dev, MAC: e.LLAddr, States: []string(e.State)})
+	}
+	return out, nil
+}
+
+// stringList accepts either a JSON string or an array of strings.
+type stringList []string
+
+func (l *stringList) UnmarshalJSON(data []byte) error {
+	var one string
+	if err := json.Unmarshal(data, &one); err == nil {
+		*l = stringList{one}
+		return nil
+	}
+	var many []string
+	if err := json.Unmarshal(data, &many); err != nil {
+		return fmt.Errorf("expected a string or an array of strings, got %s", data)
+	}
+	*l = stringList(many)
+	return nil
+}
+
 func normalizeDst(dst string, ipv6 bool) (string, error) {
 	if dst == "default" {
 		if ipv6 {

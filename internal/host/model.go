@@ -20,9 +20,11 @@ type Snapshot struct {
 	CollectedAt string `json:"collectedAt,omitempty"`
 	// Sources records what each collector did, so missing data is never
 	// mistaken for absent configuration.
-	Sources     []SourceStatus   `json:"sources"`
-	Interfaces  []Interface      `json:"interfaces,omitempty"`
-	Routes      []Route          `json:"routes,omitempty"`
+	Sources    []SourceStatus `json:"sources"`
+	Interfaces []Interface    `json:"interfaces,omitempty"`
+	Routes     []Route        `json:"routes,omitempty"`
+	// Neighbors is the node's ARP/ND table (ip neigh).
+	Neighbors   []Neighbor       `json:"neighbors,omitempty"`
 	BridgeVLANs []BridgePortVLAN `json:"bridgeVLANs,omitempty"`
 	Namespaces  []string         `json:"namespaces,omitempty"`
 	// OVS is nil when OVS state was not collected or OVS is not installed;
@@ -35,6 +37,7 @@ const (
 	SourceLinks       = "links"
 	SourceAddresses   = "addresses"
 	SourceRoutes      = "routes"
+	SourceNeighbors   = "neighbors"
 	SourceBridgeVLANs = "bridge-vlans"
 	SourceNamespaces  = "namespaces"
 	SourceBonding     = "bonding"
@@ -154,6 +157,15 @@ type PortVLANs struct {
 	Max      int  `json:"max"`
 	PVID     bool `json:"pvid,omitempty"`
 	Untagged bool `json:"untagged,omitempty"`
+}
+
+// Neighbor is one entry of the node's ARP (IPv4) or ND (IPv6) table. States
+// are the kernel's, for example REACHABLE, STALE, FAILED or INCOMPLETE.
+type Neighbor struct {
+	Address string   `json:"address"`
+	Device  string   `json:"device,omitempty"`
+	MAC     string   `json:"mac,omitempty"`
+	States  []string `json:"states,omitempty"`
 }
 
 // Route is an entry of a host routing table.

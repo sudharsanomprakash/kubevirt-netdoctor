@@ -247,6 +247,7 @@ func allCommands() map[string]string {
 		strings.Join(cmdAddrs, " "):       "ip-addr.json",
 		strings.Join(cmdRoutes4, " "):     "ip-route4.json",
 		strings.Join(cmdRoutes6, " "):     "ip-route6.json",
+		strings.Join(cmdNeighbors, " "):   "ip-neigh.json",
 		strings.Join(cmdBridgeVLANs, " "): "bridge-vlan.json",
 		strings.Join(cmdOVSBridges, " "):  "ovs-bridge.json",
 		strings.Join(cmdOVSPorts, " "):    "ovs-port.json",
@@ -285,6 +286,9 @@ func TestCollectFull(t *testing.T) {
 	}
 	if snap.NodeName != "worker-1" || snap.CollectedAt != "2026-01-01T00:00:00Z" || snap.SchemaVersion != SchemaVersion {
 		t.Errorf("metadata: %+v", snap)
+	}
+	if len(snap.Neighbors) != 4 || snap.Neighbors[0].States[0] != "REACHABLE" {
+		t.Errorf("neighbors not collected: %+v", snap.Neighbors)
 	}
 	if br := snap.FindInterface("br1"); len(br.Addresses) != 2 {
 		t.Errorf("addresses not merged: %+v", br)
@@ -387,5 +391,30 @@ func TestNamesAgree(t *testing.T) {
 		if got := NamesAgree(tc.node, tc.hostname); got != tc.want {
 			t.Errorf("NamesAgree(%q, %q) = %v", tc.node, tc.hostname, got)
 		}
+	}
+}
+
+func TestParseNeighbors(t *testing.T) {
+	neighbors, err := ParseNeighbors(read(t, "ip-neigh.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []Neighbor{
+		{Address: "192.0.2.1", Device: "br1", MAC: "aa:bb:cc:dd:ee:01", States: []string{"REACHABLE"}},
+		{Address: "192.0.2.2", Device: "br1", MAC: "aa:bb:cc:dd:ee:02", States: []string{"STALE"}},
+		{Address: "192.0.2.3", Device: "br1", States: []string{"FAILED"}},
+		{Address: "192.0.2.4", Device: "br1", States: []string{"INCOMPLETE"}},
+	}
+	if !reflect.DeepEqual(neighbors, want) {
+		t.Errorf("neighbors:\n got %+v\nwant %+v", neighbors, want)
+	}
+
+	// Older iproute2 prints state as a bare string.
+	one, err := ParseNeighbors([]byte(`[{"dst":"2001:db8::1","dev":"eth0","lladdr":"aa:bb:cc:dd:ee:05","state":"REACHABLE"}]`))
+	if err != nil || len(one) != 1 || one[0].States[0] != "REACHABLE" {
+		t.Errorf("string state: %+v %v", one, err)
+	}
+	if _, err := ParseNeighbors([]byte(`[{"dst":"192.0.2.1","state":{"x":1}}]`)); err == nil {
+		t.Error("an object where a state string or array is expected must fail")
 	}
 }
