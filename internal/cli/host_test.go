@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -104,5 +105,56 @@ func TestHostCollectRefusesMismatchedNodeName(t *testing.T) {
 	snap, err := host.DecodeSnapshot([]byte(out))
 	if err != nil || snap.NodeName != "worker-2" || snap.Hostname != "node-a" {
 		t.Errorf("override: %+v %v", snap, err)
+	}
+}
+
+func TestHostDiff(t *testing.T) {
+	dir := t.TempDir()
+	before := host.Snapshot{
+		SchemaVersion: host.SchemaVersion,
+		NodeName:      "worker-1",
+		Interfaces:    []host.Interface{{Name: "eth0", MTU: 1500, AdminUp: true}},
+	}
+	after := host.Snapshot{
+		SchemaVersion: host.SchemaVersion,
+		NodeName:      "worker-1",
+		Interfaces:    []host.Interface{{Name: "eth0", MTU: 9000, AdminUp: true}},
+	}
+	write := func(name string, snap host.Snapshot) string {
+		path := filepath.Join(dir, name)
+		data, err := json.Marshal(snap)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, data, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		return path
+	}
+	a, b := write("before.json", before), write("after.json", after)
+
+	out, _, err := runHost(t, "host", "diff", a, b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, "interface eth0") || !strings.Contains(out, "mtu: 1500 -> 9000") {
+		t.Errorf("diff output = %q", out)
+	}
+
+	other := host.Snapshot{SchemaVersion: host.SchemaVersion, NodeName: "worker-2"}
+	c := write("other.json", other)
+	if _, _, err := runHost(t, "host", "diff", a, c); err == nil || !strings.Contains(err.Error(), "different nodes") {
+		t.Errorf("different nodes err = %v", err)
+	}
+	if _, _, err := runHost(t, "host", "diff", a, c, "--allow-node-name-mismatch"); err != nil {
+		t.Errorf("allowed mismatch err = %v", err)
+	}
+
+	jsonOut, _, err := runHost(t, "host", "diff", a, b, "-o", "json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(jsonOut, `"changes"`) || !strings.Contains(jsonOut, `"field": "mtu"`) {
+		t.Errorf("json diff = %q", jsonOut)
 	}
 }
