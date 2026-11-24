@@ -13,6 +13,15 @@ host snapshot, the node's bridges, OVS ports, VLANs, bonds and routes. It report
 structured findings that say what is wrong, how certain that is, what was expected and
 what to check next.
 
+**Why can't my KubeVirt VM reach the network?** netdoctor walks every layer, from the VMI
+through the virt-launcher pod, Multus, the CNI and the node's bridges, OVS, VLANs and
+bonds, and tells you which layer disagrees, with the evidence.
+
+![kubectl netdoctor diagnose finding an OVS VLAN tag mismatch](docs/assets/demo-diagnose.svg)
+
+<sub>Real output from the test suite (synthetic cluster fixture
+`testdata/fixtures/ovs-vlan-running.yaml`); regenerate it with `hack/demo/make-demo.py`.</sub>
+
 > **Status: early development (v0.x).** The CLI and the JSON schema may change between
 > minor versions. Features marked **experimental** may change more. netdoctor never sends
 > traffic: connectivity is not tested by any command. The optional kernel tracer observes
@@ -108,21 +117,40 @@ readable but did not contain them are listed as **absent**.
 
 ## Installation
 
-Requires Go 1.26 or newer to build.
+### Release binaries
+
+Download the archive for your platform from the
+[releases page](https://github.com/sudharsanomprakash/kubevirt-netdoctor/releases), check
+it against `checksums.txt`, and put `kubectl-netdoctor` on your `PATH`:
+
+```sh
+VERSION=v0.1.0 OS=linux ARCH=amd64   # or darwin/arm64, linux/arm64, ...
+curl -LO https://github.com/sudharsanomprakash/kubevirt-netdoctor/releases/download/$VERSION/kubectl-netdoctor_${VERSION}_${OS}_${ARCH}.tar.gz
+curl -LO https://github.com/sudharsanomprakash/kubevirt-netdoctor/releases/download/$VERSION/checksums.txt
+sha256sum --ignore-missing -c checksums.txt   # macOS: shasum -a 256 --ignore-missing -c checksums.txt
+tar -xzf kubectl-netdoctor_${VERSION}_${OS}_${ARCH}.tar.gz
+sudo install kubectl-netdoctor_${VERSION}_${OS}_${ARCH}/kubectl-netdoctor /usr/local/bin/
+kubectl netdoctor version
+```
+
+Any executable named `kubectl-netdoctor` on the `PATH` is available as `kubectl netdoctor`.
+The Linux binaries are statically linked, so the same file can be copied to a node for
+`host collect` and `host trace`.
+
+### From source
+
+Requires Go 1.26 or newer:
 
 ```sh
 go install github.com/sudharsanomprakash/kubevirt-netdoctor/cmd/kubectl-netdoctor@latest
 ```
 
-Or build from source with `make build` and put `bin/kubectl-netdoctor` on your `PATH`.
-Any executable named `kubectl-netdoctor` on the `PATH` is available as `kubectl netdoctor`.
-The binary is statically linked, so the same file can be copied to a node for
-`host collect`.
+Or run `make build` and use `bin/kubectl-netdoctor`.
 
 ## Commands
 
 ```sh
-# Kubernetes API checks (unchanged since v0.1)
+# Kubernetes API checks
 kubectl netdoctor inspect vm/web-01 -n demo
 
 # Topology graph; add a host snapshot to extend it to the node
@@ -203,6 +231,60 @@ GAPS (0): not observable
 Provenance: Observed = reported by the Kubernetes API or host snapshot; Declared = stated by configuration; Inferred = derived from documented behavior or matching heuristics.
 Connectivity: NOT TESTED. Read-only Kubernetes API inspection plus a host snapshot of node worker-2 collected at 2026-01-01T00:00:00Z. Host state may have changed since; configuration does not prove forwarding. Guest and switch state were not observed.
 ```
+
+<details>
+<summary>The same topology as a Mermaid diagram (<code>topology -o mermaid</code>)</summary>
+
+```mermaid
+---
+title: "VirtualMachine demo/db-03 (solid: observed, dotted: declared or inferred as labeled)"
+---
+flowchart LR
+  n0("Bond<br/>bond1")
+  n1("BondMember<br/>bond1/ens1f0")
+  n2("BondMember<br/>bond1/ens1f1")
+  n3[("ClusterNetwork<br/>k8s-pod-network")]
+  n4("GuestInterface<br/>demo/db-03/data")
+  n5("GuestInterface<br/>demo/db-03/default")
+  n6("HostInterface<br/>bond1")
+  n7["LauncherPod<br/>demo/virt-launcher-db-03-p8w4k"]
+  n8[/"NetworkAttachmentDefinition<br/>demo/ovs-vlan200"/]
+  n9["Node<br/>worker-2"]
+  n10{{"OVSBridge<br/>br-data"}}
+  n11("OVSPort<br/>veth3e9a1c7b")
+  n12("PodInterface<br/>demo/virt-launcher-db-03-p8w4k/eth0")
+  n13("PodInterface<br/>demo/virt-launcher-db-03-p8w4k/pod3e9a1c7b2d0")
+  n14("VMINetwork<br/>demo/db-03/data")
+  n15("VMINetwork<br/>demo/db-03/default")
+  n16["VirtualMachine<br/>demo/db-03"]
+  n17["VirtualMachineInstance<br/>demo/db-03"]
+  n16 -->|"runs"| n17
+  n17 -->|"scheduled-on"| n9
+  n17 -->|"hosted-by"| n7
+  n7 -->|"scheduled-on"| n9
+  n17 -.->|"declares (declared)"| n15
+  n15 -->|"realized-as"| n5
+  n7 -->|"has-interface"| n12
+  n15 -->|"attached-via"| n12
+  n5 -.->|"bound-to (inferred)"| n12
+  n12 -.->|"member-of (declared)"| n3
+  n17 -.->|"declares (declared)"| n14
+  n14 -->|"realized-as"| n4
+  n7 -->|"has-interface"| n13
+  n14 -->|"attached-via"| n13
+  n4 -.->|"bound-to (inferred)"| n13
+  n14 -.->|"references (declared)"| n8
+  n13 -->|"created-from"| n8
+  n8 -.->|"uses-host-device (declared)"| n10
+  n13 -->|"plugged-into"| n11
+  n11 -->|"port-of"| n10
+  n10 -->|"uplink"| n6
+  n6 -->|"is-bond"| n0
+  n0 -->|"member"| n1
+  n0 -->|"member"| n2
+```
+
+</details>
 
 ### Example: diagnose with a host snapshot
 
