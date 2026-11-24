@@ -45,6 +45,21 @@ type Topology struct {
 	// launcher pod that no VMI network accounts for.
 	UnmatchedPodAttachments []PodAttachment    `json:"unmatchedPodAttachments,omitempty"`
 	AccessIssues            []kube.AccessIssue `json:"accessIssues,omitempty"`
+	// NetworkPolicies are the policies in the VM's namespace, with whether
+	// each one selects the launcher pod. Enforcement depends on the CNI.
+	NetworkPolicies []NetworkPolicyInfo `json:"networkPolicies,omitempty"`
+}
+
+// NetworkPolicyInfo summarizes one NetworkPolicy in the VM's namespace.
+type NetworkPolicyInfo struct {
+	Name string `json:"name"`
+	// PolicyTypes is the policy's own list (Ingress, Egress).
+	PolicyTypes []string `json:"policyTypes,omitempty"`
+	// IngressRules and EgressRules are counts, not evaluated rules.
+	IngressRules int `json:"ingressRules"`
+	EgressRules  int `json:"egressRules"`
+	// SelectsLauncher reports whether podSelector matches the launcher pod.
+	SelectsLauncher bool `json:"selectsLauncher"`
 }
 
 // VMInfo summarizes a VirtualMachine.

@@ -387,6 +387,7 @@ The cluster commands only read:
 | `kubevirt.io` | `virtualmachineinstances` | `get` | interfaces, phase, node, guest status |
 | `""` (core) | `pods` | `list` | virt-launcher pod discovery and Multus annotations |
 | `k8s.cni.cncf.io` | `network-attachment-definitions` | `get` | NAD CNI configuration |
+| `networking.k8s.io` | `networkpolicies` | `list` | Policies that may select the launcher pod |
 
 `topology`, `diagnose`, `trace` and `report` need nothing beyond `inspect`; host
 snapshots and traces are local files. `capabilities` uses SelfSubjectAccessReviews, which

@@ -373,3 +373,24 @@ func TestEvaluateOrdering(t *testing.T) {
 		t.Errorf("Evaluate must return an empty, non-nil slice: %#v", empty)
 	}
 }
+
+func TestNetworkPolicySelectingLauncherIsInfo(t *testing.T) {
+	topo := &topology.Topology{
+		Target: topology.Target{Kind: topology.KindVMI, Namespace: "demo", Name: "web-01"},
+		NetworkPolicies: []topology.NetworkPolicyInfo{
+			{Name: "allow-web-01", PolicyTypes: []string{"Ingress", "Egress"}, IngressRules: 1, EgressRules: 1, SelectsLauncher: true},
+			{Name: "other-app", PolicyTypes: []string{"Ingress"}, SelectsLauncher: false},
+		},
+	}
+	findings := checkNetworkPolicies(topo)
+	if len(findings) != 1 {
+		t.Fatalf("findings = %+v, want 1", findings)
+	}
+	f := findings[0]
+	if f.ID != IDNetworkPolicySelects || f.Severity != SeverityInfo || f.Category != Confirmed {
+		t.Errorf("finding = %+v", f)
+	}
+	if !strings.Contains(f.Summary, "allow-web-01") {
+		t.Errorf("summary = %q", f.Summary)
+	}
+}

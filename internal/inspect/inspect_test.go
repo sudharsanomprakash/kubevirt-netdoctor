@@ -195,3 +195,55 @@ func TestTargetErrorHintsMissingKubeconfig(t *testing.T) {
 		t.Errorf("unexpected hint: %s", other)
 	}
 }
+
+func TestInspectReportsNetworkPoliciesSelectingTheLauncher(t *testing.T) {
+	c := fakecluster.New(t, []string{
+		fixture("bridge-vlan-running.yaml"),
+		fixture("network-policy.yaml"),
+	})
+	topo, err := Inspect(context.Background(), c, vm("web-01"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(topo.NetworkPolicies) != 2 {
+		t.Fatalf("policies = %+v, want 2", topo.NetworkPolicies)
+	}
+	selected := 0
+	for _, policy := range topo.NetworkPolicies {
+		if policy.SelectsLauncher {
+			selected++
+			if policy.Name != "allow-web-01" {
+				t.Errorf("selected policy = %q", policy.Name)
+			}
+			if policy.IngressRules != 1 || policy.EgressRules != 1 {
+				t.Errorf("rule counts = %d/%d", policy.IngressRules, policy.EgressRules)
+			}
+		}
+	}
+	if selected != 1 {
+		t.Errorf("selected %d policies, want 1", selected)
+	}
+}
+
+func TestInspectRecordsDeniedNetworkPolicyList(t *testing.T) {
+	c := fakecluster.New(t, []string{
+		fixture("bridge-vlan-running.yaml"),
+		fixture("network-policy.yaml"),
+	}, fakecluster.Forbid("list", "networkpolicies"))
+	topo, err := Inspect(context.Background(), c, vm("web-01"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(topo.NetworkPolicies) != 0 {
+		t.Errorf("policies = %+v, want none", topo.NetworkPolicies)
+	}
+	found := false
+	for _, issue := range topo.AccessIssues {
+		if issue.Resource == "networkpolicies.networking.k8s.io" && issue.State == kube.StateForbidden {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("access issues = %+v, want a forbidden networkpolicies list", topo.AccessIssues)
+	}
+}

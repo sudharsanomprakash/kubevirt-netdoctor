@@ -13,6 +13,7 @@ import (
 // Finding IDs. IDs are part of the JSON contract and must stay stable.
 const (
 	IDAccessDenied            = "ACCESS_DENIED"
+	IDNetworkPolicySelects    = "NETWORK_POLICY_SELECTS_LAUNCHER"
 	IDAPIUnavailable          = "API_UNAVAILABLE"
 	IDVMINotRunning           = "VMI_NOT_RUNNING"
 	IDNADNotFound             = "NAD_NOT_FOUND"
@@ -53,7 +54,33 @@ func DefaultRules() []Rule {
 		{ID: "multus-attachments", Description: "Requested Multus attachments are reported in network-status", Check: onTopology(checkMultusAttachments)},
 		{ID: "interface-status", Description: "VMI interface spec and status agree", Check: onTopology(checkInterfaceStatus)},
 		{ID: "multus-mac", Description: "Multus applied the MAC address KubeVirt requested", Check: onTopology(checkAttachmentMAC)},
+		{ID: "network-policy", Description: "NetworkPolicies that select the launcher pod", Check: onTopology(checkNetworkPolicies)},
 	}
+}
+
+func checkNetworkPolicies(t *topology.Topology) []Finding {
+	var out []Finding
+	for _, policy := range t.NetworkPolicies {
+		if !policy.SelectsLauncher {
+			continue
+		}
+		types := "Ingress and Egress"
+		if len(policy.PolicyTypes) == 1 {
+			types = policy.PolicyTypes[0]
+		} else if len(policy.PolicyTypes) == 0 {
+			types = "the pod selector"
+		}
+		out = append(out, Finding{
+			ID:         IDNetworkPolicySelects,
+			Severity:   SeverityInfo,
+			Category:   Confirmed,
+			Resource:   fmt.Sprintf("NetworkPolicy %s/%s", t.Target.Namespace, policy.Name),
+			Summary:    fmt.Sprintf("NetworkPolicy %q selects the launcher pod (%s)", policy.Name, types),
+			Evidence:   []string{fmt.Sprintf("ingress rules: %d, egress rules: %d", policy.IngressRules, policy.EgressRules)},
+			NextAction: "Review the policy's ingress and egress rules; whether traffic is allowed depends on the CNI.",
+		})
+	}
+	return out
 }
 
 func vmiResource(t *topology.Topology) string {

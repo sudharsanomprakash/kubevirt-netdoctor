@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -136,6 +137,15 @@ func addObject(t testing.TB, u *unstructured.Unstructured, dyn *dynamicfake.Fake
 	t.Helper()
 	var gvr schema.GroupVersionResource
 	switch u.GetKind() {
+	case "NetworkPolicy":
+		policy := &networkingv1.NetworkPolicy{}
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(u.Object, policy); err != nil {
+			t.Fatalf("converting network policy %s: %v", u.GetName(), err)
+		}
+		if err := core.Tracker().Add(policy); err != nil {
+			t.Fatalf("adding network policy %s: %v", policy.Name, err)
+		}
+		return
 	case "Pod":
 		pod := &corev1.Pod{}
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(u.Object, pod); err != nil {

@@ -71,6 +71,7 @@ var apis = []apiDef{
 	{kube.VirtualMachineGVR, true, "VM lookup"},
 	{kube.VirtualMachineInstanceGVR, true, "running instance, interfaces and node"},
 	{kube.NetworkAttachmentDefinitionGVR, false, "Multus secondary network configuration"},
+	{kube.NetworkPolicyGVR, false, "NetworkPolicies that may select the launcher pod"},
 	{schema.GroupVersionResource{Group: "k8s.ovn.org", Version: "v1", Resource: "userdefinednetworks"}, false, "OVN-Kubernetes user-defined networks (presence indicates OVN-Kubernetes)"},
 	{schema.GroupVersionResource{Group: "kubeovn.io", Version: "v1", Resource: "subnets"}, false, "Kube-OVN subnets (presence indicates Kube-OVN)"},
 	{schema.GroupVersionResource{Group: "nmstate.io", Version: "v1beta1", Resource: "nodenetworkstates"}, false, "kubernetes-nmstate node state (presence indicates nmstate)"},
@@ -86,6 +87,7 @@ var reads = []accessDef{
 	{"get", kube.VirtualMachineInstanceGVR},
 	{"list", kube.PodGVR},
 	{"get", kube.NetworkAttachmentDefinitionGVR},
+	{"list", kube.NetworkPolicyGVR},
 }
 
 // Check runs discovery and access reviews for namespace.
