@@ -7,7 +7,7 @@ toolchain go1.26.10
 require (
 	github.com/cilium/ebpf v0.22.0
 	github.com/spf13/cobra v1.10.2
-	golang.org/x/sys v0.47.0
+	golang.org/x/sys v0.50.0
 	k8s.io/api v0.37.2
 	k8s.io/apimachinery v0.37.2
 	k8s.io/cli-runtime v0.37.2
